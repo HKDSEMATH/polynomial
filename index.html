@@ -401,7 +401,7 @@
     <script>
         // Deployed Google Apps Script Web App URL
         const GOOGLE_SCRIPT_URL =
-            'https://script.google.com/macros/s/AKfycbwB1-LyitqptK90TCklrjuMO3qNHhib9Zlv4WuDDIUxpBr--0owbFg0iI985sJA4X8V/exec';
+            'https://script.google.com/macros/s/AKfycbxpmwJ_BmXakqRHiHr5N57z6P4GPI_m_vkyIy7T9chnO4pbuH_aVrD0RUsj5nlYOOwY/exec';
 
         let studentProfile = null;
         let badgeRecords = { level1: false, level2: false, level3: false };
@@ -618,7 +618,7 @@
                         if (k !== 0) break;
                     }
                     ansTex = String(k);
-                    qText = `\\text{If } k \\text{ is a constant such that } x^3${this.st(A,'x^2')}${this.st(k,'x')}${this.st(C,'')} \\text{ is divisible by } ${this.linFactor(r)}, \\text{ then } k =`;
+                    qText = `\\text{If } k \\text{ is a constant such that } x^3${this.st(A,'x^2')}+kx${this.st(C,'')} \\text{ is divisible by } ${this.linFactor(r)}, \\text{ then } k =`;
                     instruction = "Find the value of k.";
                     opts = this.opts4(ansTex, [String(k+1), String(k-1), String(k+2), String(k-2), String(k+3), String(k-3)]);
                 } else if (type === 2) {
@@ -652,17 +652,17 @@
                     instruction = "Find the value of k.";
                     opts = this.opts4(ansTex, [String(-k), String(k/2), String(2*k), String(k+2), String(k-2)]);
                 } else if (type === 5) {
-                    // Q61 (20-P2-Q6): g(x) = ax^3 + Aa x^2 + C, (x+r) is a factor -> g(s)
+                    // Q61 (20-P2-Q6): g(x) = ax^3 + Aa x^2 + C, (x-r) is a factor -> g(s)
                     let r = 0, A = 0, C = 0, a = 0, s = 0, gs = 0;
                     for (let t = 0; t < 60; t++) {
                         r = this.nz(-3, 3);
                         A = this.nz(2, 6);
-                        const div = r*r*r - A*r*r;
+                        const div = -(r*r*r + A*r*r);
                         if (div === 0) continue;
                         a = this.nz(2, 4);
                         C = div * a;
                         s = this.nz(-4, 4);
-                        if (s === -r) continue;
+                        if (s === r) continue;
                         gs = a*(s*s*s + A*s*s) + C;
                         if (gs === 0) continue;
                         break;
@@ -720,13 +720,13 @@
                         n = this.nz(2, 4);
                         C = div * n;
                         s = this.nz(-4, 4);
-                        if (s === -r || s === r) continue;
+                        if (s === -r) continue;
                         ps = n*(s*s*s + c*s) + C;
                         if (ps === 0) continue;
                         break;
                     }
                     ansTex = String(ps);
-                    qText = `\\text{Let } p(x) = nx^3${this.nl(c,'n','x')}${this.st(C,'')} \\text{, where } n \\text{ is a constant. If } ${this.linFactor(r)} \\text{ is a factor of } p(x) \\text{, then } p(${s}) =`;
+                    qText = `\\text{Let } p(x) = nx^3${this.nl(c,'n','x')}${this.st(C,'')} \\text{, where } n \\text{ is a constant. If } ${this.linFactor(-r)} \\text{ is a factor of } p(x) \\text{, then } p(${s}) =`;
                     instruction = `Find the value of p(${s}).`;
                     opts = this.opts4(ansTex, ['0', String(ps+1), String(ps-1), String(ps+2), String(ps-2)]);
                     vars = ['n'];
