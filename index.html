@@ -1,0 +1,2035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HKDSE More about Polynomials Revision Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .heart-bounce { animation: bounce 1s infinite; }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-20%) scale(1.1); }
+        }
+        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .toast {
+            min-width: 250px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.3s ease-out forwards;
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        .toast.success { background-color: #10b981; }
+        .toast.error { background-color: #ef4444; }
+        .toast.info { background-color: #3b82f6; }
+        .toast.fade-out { animation: fadeOut 0.5s ease-in forwards; }
+        
+        @keyframes slideIn {
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateX(100%); }
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px;}
+        ::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+
+        .format-btn.active {
+            border-color: #f59e0b !important;
+            background-color: rgba(245, 158, 11, 0.2) !important;
+            color: #fde68a !important;
+        }
+
+        /* Root cause fix: Tailwind preflight sets svg { display: block;
+           vertical-align: middle; }, which breaks MathJax inline math inside
+           flowing text (fragments on their own line / raised, oversized look).
+           Restore correct inline behaviour for math in the question text. */
+        #question-display mjx-container,
+        #l3-area mjx-container {
+            margin: 0 0.1em !important;
+            font-size: 1em !important;
+        }
+        #question-display mjx-container svg,
+        #l3-area mjx-container svg {
+            display: inline-block !important;
+        }
+        /* Display equations (\[...\] / $$...$$) keep their block formatting */
+        #question-display mjx-container[display="true"],
+        #l3-area mjx-container[display="true"] {
+            display: block !important;
+            margin: 0.75rem 0 !important;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4 selection:bg-amber-500 selection:text-white">
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <div id="login-screen" class="w-full max-w-md glass-panel rounded-3xl p-8 shadow-2xl transition-all duration-500">
+        <div class="text-center mb-8">
+            <div class="text-5xl mb-4">🚀</div>
+            <h1 class="text-2xl font-bold text-white mb-2">HKDSE Mathematics</h1>
+            <h2 class="text-amber-400 font-semibold tracking-wide uppercase text-sm">More about Polynomials (Factor & Remainder Theorem)</h2>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-1">Class (e.g., 4A)</label>
+                <input type="text" id="student-class" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 uppercase" placeholder="4A">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-1">Class Number</label>
+                <input type="number" id="student-no" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500" placeholder="12">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-1">Name</label>
+                <input type="text" id="student-name" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500" placeholder="Chan Tai Man">
+            </div>
+            <button onclick="login()" class="w-full mt-6 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-3 px-4 rounded-lg transition shadow-lg shadow-amber-500/20 active:scale-95">
+                Start Mission
+            </button>
+        </div>
+    </div>
+
+    <div id="dashboard-screen" class="hidden w-full max-w-3xl flex flex-col gap-6 transition-all duration-500">
+        
+        <!-- Header -->
+        <div class="glass-panel rounded-2xl p-6 flex justify-between items-center shadow-xl">
+            <div>
+                <h2 class="text-2xl font-bold text-white" id="display-name">Welcome, Student</h2>
+                <p class="text-slate-400 text-sm">Class: <span id="display-class" class="text-amber-400 font-semibold"></span> | No: <span id="display-no" class="text-amber-400 font-semibold"></span></p>
+            </div>
+            <button onclick="logout()" class="text-slate-400 hover:text-white transition text-sm">
+                Switch User 🚪
+            </button>
+        </div>
+
+        <!-- Completion Passport -->
+        <div class="glass-panel rounded-2xl p-6 shadow-xl border border-amber-500/30 relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none text-8xl">🎓</div>
+            
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-slate-700/60 pb-4">
+                <h3 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                    🎓 Completion Passport (學習記錄卡)
+                </h3>
+                <div class="flex flex-wrap gap-2 z-10 justify-end">
+                    <button id="btn-submit-teacher" onclick="submitToTeacher()" class="bg-blue-600 hover:bg-blue-500 border border-blue-400 text-white px-3 py-2 rounded-lg font-semibold transition shadow-lg shadow-blue-500/20 text-sm flex items-center gap-2 active:scale-95">
+                        <span>Submit to Teacher</span> 📧
+                    </button>
+                    <button onclick="resetBadges()" class="bg-slate-700 hover:bg-slate-600 border border-slate-500 text-slate-200 px-3 py-2 rounded-lg transition text-sm active:scale-95">
+                        Reset 🔄
+                    </button>
+                </div>
+            </div>
+
+            <!-- Score Board -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
+                <div class="bg-slate-800/80 rounded-xl p-4 text-center border border-slate-700 transition duration-300" id="badge-card-1">
+                    <div class="text-3xl mb-2" id="badge-icon-1">🔒</div>
+                    <div class="font-bold text-slate-200">Level 1</div>
+                    <div class="text-xs text-slate-400 mb-2">Remainder & Factor Theorem</div>
+                    <div id="badge-status-1" class="text-sm font-semibold text-slate-500">Not Attempted</div>
+                    <div class="mt-2 inline-flex items-center gap-1 bg-slate-900/80 border border-amber-500/30 rounded-full px-3 py-1">
+                        <span class="text-xs text-amber-300 font-bold">⭐ <span id="score-1">0</span> marks</span>
+                    </div>
+                </div>
+                <div class="bg-slate-800/80 rounded-xl p-4 text-center border border-slate-700 transition duration-300" id="badge-card-2">
+                    <div class="text-3xl mb-2" id="badge-icon-2">🔒</div>
+                    <div class="font-bold text-slate-200">Level 2</div>
+                    <div class="text-xs text-slate-400 mb-2">Paper 1 Part (a)</div>
+                    <div id="badge-status-2" class="text-sm font-semibold text-slate-500">Not Attempted</div>
+                    <div class="mt-2 inline-flex items-center gap-1 bg-slate-900/80 border border-amber-500/30 rounded-full px-3 py-1">
+                        <span class="text-xs text-amber-300 font-bold">⭐ <span id="score-2">0</span> marks</span>
+                    </div>
+                </div>
+                <div class="bg-slate-800/80 rounded-xl p-4 text-center border border-slate-700 transition duration-300" id="badge-card-3">
+                    <div class="text-3xl mb-2" id="badge-icon-3">🔒</div>
+                    <div class="font-bold text-slate-200">Level 3</div>
+                    <div class="text-xs text-slate-400 mb-2">Paper 1 (a)(b)(c)</div>
+                    <div id="badge-status-3" class="text-sm font-semibold text-slate-500">Not Attempted</div>
+                    <div class="mt-2 inline-flex items-center gap-1 bg-slate-900/80 border border-amber-500/30 rounded-full px-3 py-1">
+                        <span class="text-xs text-amber-300 font-bold">⭐ <span id="score-3">0</span> marks</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 relative z-10 flex justify-center">
+                <div class="bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border border-amber-500/40 rounded-full px-6 py-2 flex items-center gap-3">
+                    <span class="text-lg">🏆</span>
+                    <span class="text-sm font-bold text-amber-300">Total Marks: <span id="total-marks" class="text-xl font-extrabold text-yellow-300">0</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-panel rounded-2xl p-6 shadow-xl">
+            <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4 text-center">
+                📋 Question Format (題目模式)
+            </h3>
+            <div class="flex flex-col gap-2 text-sm text-slate-300 bg-slate-800/60 border border-slate-700 rounded-lg p-4 text-left">
+                <p>📘 <strong>Paper 1 questions</strong> (Factor / Remainder theorem, 2013 onwards) → <span class="text-emerald-400 font-semibold">Conventional / Fill-in</span></p>
+                <p>📗 <strong>Paper 2 questions</strong> (Remainder & factor theorem MCQ) → <span class="text-amber-400 font-semibold">Multiple Choice</span></p>
+                <p class="text-[12px] text-slate-400 mt-1">💡 Multi-value answers: type <span class="font-mono text-amber-300">h=-9, k=4</span> · Yes/No answers: type <span class="font-mono text-amber-300">yes</span> or <span class="font-mono text-amber-300">no</span></p>
+            </div>
+            <p class="text-xs text-slate-500 mt-3 text-center italic">
+                Each question appears in the same format as the real DSE paper it comes from.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button onclick="startGame(1)" class="glass-panel rounded-2xl p-6 text-left hover:-translate-y-1 transition duration-300 border-t-4 border-green-500 group relative overflow-hidden">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-xl text-white group-hover:text-green-400 transition">Level 1</h3>
+                    <span class="text-2xl group-hover:scale-110 transition">🟢</span>
+                </div>
+                <p class="text-slate-400 text-sm relative z-10">Remainder & factor theorem: find the remainder \(f(k)\), check whether \(x-k\) is a factor, find \(k\) making \(x-k\) a factor. (Paper 2 · MCQ)</p>
+            </button>
+
+            <button onclick="startGame(2)" class="glass-panel rounded-2xl p-6 text-left hover:-translate-y-1 transition duration-300 border-t-4 border-amber-500 group relative overflow-hidden">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-xl text-white group-hover:text-amber-400 transition">Level 2</h3>
+                    <span class="text-2xl group-hover:scale-110 transition">🟡</span>
+                </div>
+                <p class="text-slate-400 text-sm relative z-10">Part (a) questions from DSE Paper 1 (2013+): find h &amp; k, a &amp; b, quotients, check factors. (Paper 1 · fill-in)</p>
+            </button>
+
+            <button onclick="startGame(3)" class="glass-panel rounded-2xl p-6 text-left hover:-translate-y-1 transition duration-300 border-t-4 border-red-500 group relative overflow-hidden">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-bold text-xl text-white group-hover:text-red-400 transition">Level 3</h3>
+                    <span class="text-2xl group-hover:scale-110 transition">🔴</span>
+                </div>
+                <p class="text-slate-400 text-sm relative z-10">Full DSE Paper 1 (a)(b) long questions (2013+): find the coefficients, then factorize the polynomial completely. (fill-in)</p>
+            </button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="hidden w-full max-w-3xl flex flex-col gap-4">
+        
+        <div class="flex justify-between items-center bg-slate-800 rounded-full px-6 py-3 shadow-lg border border-slate-700">
+            <div class="font-bold text-amber-400" id="level-indicator">Level 1</div>
+            <div class="flex gap-1 text-xl" id="lives-container">
+                <!-- Hearts injected here -->
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="text-slate-300 font-mono bg-slate-900 px-3 py-1 rounded-full text-sm font-semibold">
+                    Q: <span id="q-counter">1/5</span>
+                </div>
+                <div class="text-amber-300 font-mono bg-slate-900 border border-amber-500/30 px-3 py-1 rounded-full text-sm font-semibold">
+                    ⭐ <span id="live-score">0</span>
+                </div>
+            </div>
+            <button onclick="quitGame()" class="text-slate-500 hover:text-red-400 transition text-xs font-bold uppercase tracking-wider">
+                Abort
+            </button>
+        </div>
+
+        <div class="glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl text-center min-h-[350px] flex flex-col relative w-full" id="main-game-area">
+            
+            <div class="w-full flex justify-between items-center mb-2 border-b border-slate-700/50 pb-3">
+                <div class="flex flex-col text-left">
+                    <h3 class="text-slate-300 text-sm font-semibold" id="question-instruction">Solve the problem:</h3>
+                    <div class="flex gap-3 flex-wrap">
+                        <span class="text-xs text-amber-400 font-semibold" id="format-hint"></span>
+                        <span class="text-xs text-sky-400 font-semibold" id="paper-hint"></span>
+                        <span class="text-xs text-emerald-400 font-semibold" id="part-label"></span>
+                    </div>
+                </div>
+                <div class="flex gap-2 shrink-0">
+                    <button onclick="askAITutor()" class="text-[10px] sm:text-xs bg-purple-600/20 text-purple-300 border border-purple-500/30 px-3 py-1.5 rounded-full hover:bg-purple-600/40 transition font-bold active:scale-95 flex items-center gap-1">
+                        Ask AI ✨
+                    </button>
+                    <button onclick="toggleCheatSheet()" class="text-[10px] sm:text-xs bg-blue-600/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-full hover:bg-blue-600/40 transition active:scale-95 flex items-center gap-1">
+                        Formulas 💡
+                    </button>
+                </div>
+            </div>
+
+            <div id="question-display" class="text-base sm:text-lg text-white mb-5 overflow-x-auto py-4 px-4 text-justify leading-relaxed min-h-[100px] w-full">
+                <!-- MathJax renders here -->
+            </div>
+            
+            <div id="mc-options" class="grid grid-cols-1 sm:grid-cols-2 gap-4 hidden w-full mt-auto">
+                <button onclick="submitMCAnswer(0)" class="option-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl p-4 text-xl transition-all shadow-md active:scale-95 min-h-[64px] flex items-center justify-center"></button>
+                <button onclick="submitMCAnswer(1)" class="option-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl p-4 text-xl transition-all shadow-md active:scale-95 min-h-[64px] flex items-center justify-center"></button>
+                <button onclick="submitMCAnswer(2)" class="option-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl p-4 text-xl transition-all shadow-md active:scale-95 min-h-[64px] flex items-center justify-center"></button>
+                <button onclick="submitMCAnswer(3)" class="option-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl p-4 text-xl transition-all shadow-md active:scale-95 min-h-[64px] flex items-center justify-center"></button>
+            </div>
+
+            <div id="conventional-area" class="hidden flex flex-col items-center gap-4 w-full max-w-md mx-auto mt-auto">
+                <p class="text-[11px] text-slate-400 text-center leading-tight">
+                    Use <code class='bg-slate-800 px-1 py-0.5 rounded text-amber-300 font-mono'>^</code> for powers & <code class='bg-slate-800 px-1 py-0.5 rounded text-amber-300 font-mono'>( )</code> for brackets.<br>
+                    E.g. <span class='font-mono text-emerald-400'>x^2+5x+6</span> or <span class='font-mono text-emerald-400'>(x+2)(x+3)</span> or <span class='font-mono text-emerald-400'>(x+3)^2</span>
+                </p>
+
+                <div class="flex gap-2 w-full">
+                    <input type="text" id="conventional-input" placeholder="e.g. (x+2)(x+3)" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-lg font-mono text-white outline-none focus:border-amber-500 transition shadow-inner" oninput="updateLivePreview()" onkeypress="handleEnter(event)">
+                    <button onclick="submitFillAnswer()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-6 rounded-lg text-base transition shadow-md active:scale-95">
+                        Submit
+                    </button>
+                </div>
+
+                <div id="helper-buttons" class="flex flex-wrap gap-2 justify-center w-full mt-1">
+                    <!-- dynamically injected helper buttons -->
+                </div>
+
+                <div class="w-full p-4 bg-slate-900/60 border border-slate-700 rounded-lg text-center min-h-[80px] flex flex-col justify-center items-center mt-2">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Live Math Preview</span>
+                    <div id="math-preview" class="text-xl text-slate-300 min-h-[30px] flex items-center justify-center">\( \text{Empty} \)</div>
+                </div>
+            </div>
+
+            <!-- Level 3: multi-part (a)(b)(c) blocks, each with its own question + answer area -->
+            <div id="l3-area" class="hidden w-full mt-auto">
+                <div id="l3-blocks" class="flex flex-col gap-4"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- CHEAT SHEET MODAL -->
+    <div id="cheat-modal" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 p-4 backdrop-blur-sm transition-opacity" onclick="if(event.target===this) toggleCheatSheet()">
+        <div class="glass-panel p-6 rounded-2xl border border-slate-600 max-w-sm w-full shadow-2xl">
+            <h3 class="text-2xl font-bold text-amber-400 mb-4 border-b border-slate-700 pb-2">Formula Sheet (Levels 1–3)</h3>
+            <ul class="space-y-4 text-lg font-serif">
+                <li class="flex justify-between items-center"><span class="text-slate-300 text-sm font-sans">Remainder theorem:</span> <span class="bg-slate-900/80 px-2 py-1 rounded text-white border border-slate-700">remainder of \(f(x)\div(x-k)\) is \(f(k)\)</span></li>
+                <li class="flex justify-between items-center"><span class="text-slate-300 text-sm font-sans">Factor theorem:</span> <span class="bg-slate-900/80 px-2 py-1 rounded text-white border border-slate-700">\(f(k)=0 \iff (x-k)\) is a factor of \(f(x)\)</span></li>
+                <li class="flex justify-between items-center"><span class="text-slate-300 text-sm font-sans">Long division:</span> <span class="bg-slate-900/80 px-2 py-1 rounded text-white border border-slate-700">\(f(x)=(x-k)Q(x)+f(k)\)</span></li>
+                <li class="flex justify-between items-center"><span class="text-slate-300 text-sm font-sans">Division form:</span> <span class="bg-slate-900/80 px-2 py-1 rounded text-white border border-slate-700">\(f(x)=(\text{divisor})(\text{quotient})+\text{remainder}\)</span></li>
+                <li class="flex justify-between items-center"><span class="text-slate-300 text-sm font-sans">Roots from factors:</span> <span class="bg-slate-900/80 px-2 py-1 rounded text-white border border-slate-700">\((x-r)\) is a factor \(\iff x=r\) is a root</span></li>
+                <li class="flex justify-between items-center"><span class="text-slate-300 text-sm font-sans">Discriminant:</span> <span class="bg-slate-900/80 px-2 py-1 rounded text-white border border-slate-700">\(ax^2+bx+c=0\): \(D=b^2-4ac\)</span></li>
+                <li class="flex justify-between items-center"><span class="text-slate-300 text-sm font-sans">Rational roots:</span> <span class="bg-slate-900/80 px-2 py-1 rounded text-white border border-slate-700">\(D\ge 0\) &amp; \(D\) a perfect square</span></li>
+                <li class="flex justify-between items-center"><span class="text-slate-300 text-sm font-sans">Irrational roots:</span> <span class="bg-slate-900/80 px-2 py-1 rounded text-white border border-slate-700">\(D>0\) but \(D\) not a perfect square</span></li>
+                <li class="flex justify-between items-center"><span class="text-slate-300 text-sm font-sans">No real roots:</span> <span class="bg-slate-900/80 px-2 py-1 rounded text-white border border-slate-700">\(D<0\)</span></li>
+                <li class="flex justify-between items-center"><span class="text-slate-300 text-sm font-sans">Difference of squares:</span> <span class="bg-slate-900/80 px-2 py-1 rounded text-white border border-slate-700">\(a^2-b^2=(a+b)(a-b)\)</span></li>
+                <li class="flex justify-between items-center"><span class="text-slate-300 text-sm font-sans">Perfect square:</span> <span class="bg-slate-900/80 px-2 py-1 rounded text-white border border-slate-700">\((x\pm a)^2=x^2\pm 2ax+a^2\)</span></li>
+            </ul>
+            <button onclick="toggleCheatSheet()" class="mt-8 w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg active:scale-95 transition">Close</button>
+        </div>
+    </div>
+
+    <!-- AI TUTOR MODAL -->
+    <div id="ai-tutor-modal" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50 p-4 backdrop-blur-sm transition-opacity" onclick="if(event.target===this) closeAITutor()">
+        <div class="glass-panel border border-purple-500/50 max-w-lg w-full rounded-2xl shadow-2xl p-6 flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3 mb-4">
+                <h3 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-300 flex items-center gap-2">
+                    <span>✨ AI Tutor (HKDSE 導師)</span>
+                </h3>
+                <button onclick="closeAITutor()" class="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+            </div>
+            
+            <div id="ai-content-area" class="flex-1 overflow-y-auto pr-2 space-y-4 text-slate-200 text-sm sm:text-base leading-relaxed">
+                <!-- AI tutor contents rendered here -->
+            </div>
+            
+            <button onclick="closeAITutor()" class="mt-6 w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition active:scale-95">
+                Got it, thanks!
+            </button>
+        </div>
+    </div>
+
+    <!-- WRONG ANSWER TECHNIQUE REFLECTION MODAL -->
+    <div id="wrong-reflection-modal" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center z-[60] p-4 backdrop-blur-md transition-opacity">
+        <div class="glass-panel border-2 border-red-500/40 max-w-md w-full rounded-2xl shadow-2xl p-6 flex flex-col">
+            <div class="flex items-center gap-3 mb-4 border-b border-slate-700 pb-3">
+                <span class="text-3xl">🛑</span>
+                <h3 class="text-xl font-bold text-red-400">Wait! Let's Reflect</h3>
+            </div>
+            <p class="text-slate-300 mb-6 text-sm">You got that one wrong. Before moving on, which <strong>technique</strong> was primarily needed to solve that question?</p>
+
+            <div class="space-y-3">
+                <button onclick="submitWrongReflection('remainder_theorem')" class="w-full text-left px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl transition active:scale-95 flex items-center justify-between group">
+                    <span class="text-sm font-semibold text-slate-200 group-hover:text-white">Remainder Theorem</span>
+                    <span class="font-serif bg-slate-900 px-2 py-1 rounded text-xs text-amber-300">remainder of \(f(x)\div(x-k)\) is \(f(k)\)</span>
+                </button>
+                <button onclick="submitWrongReflection('factor_theorem')" class="w-full text-left px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl transition active:scale-95 flex items-center justify-between group">
+                    <span class="text-sm font-semibold text-slate-200 group-hover:text-white">Factor Theorem</span>
+                    <span class="font-serif bg-slate-900 px-2 py-1 rounded text-xs text-amber-300">\(f(k)=0 \iff (x-k)\) is a factor</span>
+                </button>
+                <button onclick="submitWrongReflection('use_a')" class="w-full text-left px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl transition active:scale-95 flex items-center justify-between group">
+                    <span class="text-sm font-semibold text-slate-200 group-hover:text-white">Use the Part (a) Result</span>
+                    <span class="font-serif bg-slate-900 px-2 py-1 rounded text-xs text-amber-300">substitute the earlier part</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WRONG ANSWER FEEDBACK MODAL -->
+    <div id="feedback-toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-950/90 backdrop-blur-md border-2 border-red-500 text-red-100 px-6 py-4 rounded-xl shadow-2xl hidden z-50 text-center max-w-sm w-full transition-all">
+        <div class="flex items-center justify-center gap-2 mb-1">
+            <span class="text-2xl">❌</span>
+            <p class="font-bold text-lg">Incorrect Answer!</p>
+        </div>
+        <p class="text-sm text-red-300 mt-1">Substitute \(x=k\) back into \(f(x)\) — the remainder is \(f(k)\), and \(f(k)=0\) means \((x-k)\) is a factor.</p>
+    </div>
+
+    <script>
+        // Deployed Google Apps Script Web App URL
+        const GOOGLE_SCRIPT_URL =
+            'https://script.google.com/macros/s/AKfycbxpmwJ_BmXakqRHiHr5N57z6P4GPI_m_vkyIy7T9chnO4pbuH_aVrD0RUsj5nlYOOwY/exec';
+
+        let studentProfile = null;
+        let badgeRecords = { level1: false, level2: false, level3: false };
+        let currentLevel = 1;
+        let currentQuestionIndex = 0;
+        let lives = 3;
+        let currentQuestions = [];
+        let currentQuestionMode = 'mc'; // state for current specific question: paper-driven ('Paper 1'=fill, 'Paper 2'=mc)
+        let currentSets = [];    // Level 3: array of question sets (each set = array of parts)
+        let currentSetIndex = 0;
+        let activePart = null;   // the part currently being answered (for reflection / AI tutor)
+        
+        // --- SCORE BOARD ---
+        // Full marks per level, marks deducted per heart lost. Marks accumulate across replays.
+        const MARKS = {
+            1: { full: 10, perHeart: 1 },
+            2: { full: 15, perHeart: 1 },
+            3: { full: 30, perHeart: 1 }
+        };
+        const NUM_QUESTIONS = 5;
+        const LEVEL3_SETS = 5;
+        const LEVEL_LIVES = { 1: 5, 2: 5, 3: 5 };
+        let scoreTotals = { level1: 0, level2: 0, level3: 0 };
+        
+        // Tracking variables for correct percentage
+        let levelStats = { 
+            level1: { correct: 0, total: 0 }, 
+            level2: { correct: 0, total: 0 }, 
+            level3: { correct: 0, total: 0 } 
+        };
+
+                                // --- MATH GENERATOR ENGINE (More about Polynomials: Factor & Remainder theorem) ---
+        // Level 1: Remainder & factor theorem MC (sort Paper 2 Ch.4 Q53-66, pg 10-11)
+        // Level 2: Paper 1 part (a) fill-in (sort Paper 1 Ch.4 Q8-20, 2013 onwards only)
+        // Level 3: full Paper 1 (a)(b)(c) sets (sort Paper 1 Ch.4 Q8-20, 2013 onwards only)
+        const MathGen = {
+            rand: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
+            shuffle: (array) => [...array].sort(() => Math.random() - 0.5),
+            c: (coef, v) => coef === 1 ? v : (coef === -1 ? `-${v}` : `${coef}${v}`),
+            gcd: function(a, b) { a = Math.abs(a); b = Math.abs(b); return b ? this.gcd(b, a % b) : a; },
+
+            // nonzero random integer in [min,max]
+            nz: function(min, max) { let v = 0; while (v === 0) v = this.rand(min, max); return v; },
+
+            // signed term builder: st(3,'x^2')->'+3x^2', st(-2,'')->'-2', st(0,..)->''
+            st: function(coef, sym) {
+                if (coef === 0) return '';
+                const abs = Math.abs(coef) === 1 ? '' : Math.abs(coef);
+                const body = sym === '' ? String(Math.abs(coef)) : abs + sym;
+                return (coef > 0 ? '+' : '-') + body;
+            },
+
+            // polynomial from descending coefficients: poly([2,-3,5,-7]) -> '2x^3-3x^2+5x-7'
+            poly: function(cs, v = 'x') {
+                const n = cs.length - 1;
+                let out = '';
+                for (let i = 0; i <= n; i++) {
+                    const c = cs[i];
+                    const pow = n - i;
+                    if (c === 0) continue;
+                    const abs = Math.abs(c);
+                    const body = pow === 0 ? String(abs) : (abs === 1 ? '' : String(abs)) + v + (pow === 1 ? '' : '^' + pow);
+                    if (out === '') out = (c < 0 ? '-' : '') + body;
+                    else out += (c < 0 ? '-' : '+') + body;
+                }
+                return out === '' ? '0' : out;
+            },
+
+            // linear factor: linFactor(2)->'(x-2)', linFactor(-3)->'(x+3)'
+            linFactor: function(r, v = 'x') {
+                if (r === 0) return '(' + v + ')';
+                return '(' + v + (r < 0 ? '+' + (-r) : '-' + r) + ')';
+            },
+
+            // numeric times a power symbol: numLetter(6,'a^2')->'6a^2', numLetter(-4,'a^2')->'-4a^2'
+            numLetter: function(C, sym) {
+                if (C === 0) return '0';
+                const abs = Math.abs(C) === 1 ? '' : String(Math.abs(C));
+                return (C < 0 ? '-' : '') + abs + sym;
+            },
+
+            // 4 unique MC options (TeX strings) with answer first, wrapped '$ ... $'
+            opts4: function(ansTex, cands) {
+                const seen = [ansTex];
+                const out = [ansTex];
+                for (const c of cands) {
+                    if (!seen.includes(c) && out.length < 4) { seen.push(c); out.push(c); }
+                }
+                let i = 0;
+                while (out.length < 4) {
+                    const alt = cands[i % cands.length] + (i + 1);
+                    if (!seen.includes(alt)) { seen.push(alt); out.push(alt); }
+                    i++;
+                }
+                return this.shuffle(out).map(o => `$ ${o} $`);
+            },
+
+            // L3 part factory: fill answerStr + MC options (for headless MC fallback) + display TeX
+            part: function(displayTex, answerStr, ansTex, distractors, vars, law, src) {
+                const seen = new Set([ansTex]);
+                const list = [ansTex];
+                for (const o of distractors) {
+                    const os = String(o);
+                    if (!seen.has(os) && list.length < 4) { seen.add(os); list.push(os); }
+                }
+                let i = 0;
+                while (list.length < 4) {
+                    const alt = String(distractors[i % distractors.length]) + (i + 1);
+                    if (!seen.has(alt)) { seen.add(alt); list.push(alt); }
+                    i++;
+                }
+                return {
+                    instruction: "Multi-part question — answer the parts in order:",
+                    displayTex: displayTex, answerStr: answerStr, mcAnswerStr: ansTex,
+                    variables: vars, firstStepLaw: law, src: src,
+                    options: this.shuffle(list.map(o => `$ ${o} $`))
+                };
+            },
+
+            // signed term with a letter coefficient: nl(3,'a','x^2') -> '+3ax^2'
+            nl: function(C, v, sym) {
+                if (C === 0) return '';
+                const body = (Math.abs(C) === 1 ? '' : Math.abs(C)) + v + sym;
+                return (C > 0 ? '+' : '-') + body;
+            },
+
+            isSquare: function(n) { return n >= 0 && Number.isInteger(Math.sqrt(n)); },
+
+            // '2(x-5)(x-1)^2' style factorization string from a root list
+            // (duplicate roots are merged with ^2)
+            factorize: function(roots) {
+                const cnt = {};
+                roots.forEach(r => { cnt[r] = (cnt[r] || 0) + 1; });
+                return Object.keys(cnt).map(Number).sort((a, b) => a - b).map(r => {
+                    const s = this.linFactor(r);
+                    return cnt[r] > 1 ? s + '^2' : s;
+                }).join('');
+            },
+
+            // MC distractors for factorization answers: perturb each bracketed constant
+            factorOpts: function(ansStr) {
+                const cands = [];
+                const re = /(-?\d+)\)/g;
+                let m;
+                while ((m = re.exec(ansStr)) !== null && cands.length < 6) {
+                    const n = parseInt(m[1], 10);
+                    if (n === 0) continue;
+                    const idx = m.index;
+                    const before = ansStr.slice(0, idx);
+                    const after = ansStr.slice(idx + m[1].length);
+                    cands.push(before + (n + 1) + after);
+                    cands.push(before + (n - 1) + after);
+                }
+                return this.opts4(ansStr, cands);
+            },
+
+            // MC options for a multi-value answer like 'h=2,k=-5'
+            multiOpts: function(ansStr) {
+                const pairs = parsePairs(ansStr);
+                const keys = Object.keys(pairs);
+                const cands = [];
+                for (let i = 0; i < keys.length && cands.length < 4; i++) {
+                    const mk = (d) => keys.map((k, j) => k + '=' + (j === i ? pairs[k] + d : pairs[k])).join(',');
+                    cands.push(mk(1));
+                    cands.push(mk(-1));
+                }
+                if (cands.length < 4) cands.push(keys.map(k => k + '=' + (-pairs[k])).join(','));
+                return this.opts4(ansStr, cands);
+            },
+
+            // MC options for a Yes/No answer
+            ynOpts: function(ans) {
+                return this.opts4(ans, [ans === 'yes' ? 'no' : 'yes', '0', '1']);
+            },
+
+            // ============ LEVEL 1: REMAINDER & FACTOR THEOREM MC (sort Paper 2 Ch.4 Q53-66) ============
+            generateL1: function(typeIdx) {
+                const type = typeIdx % 11;
+                const SRCS = [
+                    'P2 Q53 · Sample Paper-P2-Q5 (also Q54 · Practice Paper-P2-Q5)',
+                    'P2 Q55 · HKDSE 12-P2-Q4',
+                    'P2 Q56 · HKDSE 13-P2-Q9 (also Q57 · 16-P2-Q6, Q58 · 17-P2-Q7)',
+                    'P2 Q59 · HKDSE 18-P2-Q8',
+                    'P2 Q60 · HKDSE 19-P2-Q9',
+                    'P2 Q61 · HKDSE 20-P2-Q6',
+                    'P2 Q62 · HKDSE 21-P2-Q8',
+                    'P2 Q63 · HKDSE 22-P2-Q9',
+                    'P2 Q64 · HKDSE 23-P2-Q9',
+                    'P2 Q65 · HKDSE 24-P2-Q9',
+                    'P2 Q66 · HKDSE 25-P2-Q9'
+                ];
+                let qText = "", ansTex = "", opts = [], law = 'factor_theorem';
+                let instruction = "Find the remainder.";
+                let vars = ['x'];
+
+                if (type === 0) {
+                    // Q53/Q54: remainder theorem — R = f(r)
+                    const a = this.rand(1, 3), b = this.nz(-5, 5), c = this.nz(-5, 5), d = this.nz(-5, 5);
+                    const r = this.nz(-4, 4);
+                    const R = a*r*r*r + b*r*r + c*r + d;
+                    ansTex = String(R);
+                    qText = `\\text{Let } f(x) = ${this.poly([a,b,c,d])}. \\text{ When } f(x) \\text{ is divided by } ${this.linFactor(r)}, \\text{ the remainder is}`;
+                    opts = this.opts4(ansTex, [String(R+1), String(R-1), String(R+2), String(R-2), String(R+3), String(R-3)]);
+                    law = 'remainder_theorem';
+                } else if (type === 1) {
+                    // Q55 (12-P2-Q4): x^3 + A x^2 + k x + C divisible by (x+r) -> find k
+                    let r = 0, A = 0, C = 0, k = 0;
+                    for (let t = 0; t < 60; t++) {
+                        r = this.nz(-3, 3);
+                        A = this.nz(-3, 3);
+                        C = [6, 8, 10, 12, -6, -8, -10, -12][this.rand(0, 7)];
+                        if (C % r !== 0) continue;
+                        k = -r*r - A*r - C/r;
+                        if (k !== 0) break;
+                    }
+                    ansTex = String(k);
+                    qText = `\\text{If } k \\text{ is a constant such that } x^3${this.st(A,'x^2')}${this.st(k,'x')}${this.st(C,'')} \\text{ is divisible by } ${this.linFactor(r)}, \\text{ then } k =`;
+                    instruction = "Find the value of k.";
+                    opts = this.opts4(ansTex, [String(k+1), String(k-1), String(k+2), String(k-2), String(k+3), String(k-3)]);
+                } else if (type === 2) {
+                    // Q56/Q57/Q58: divisible by (x-r) -> find remainder at another point
+                    const a = this.rand(1, 3), b = this.nz(-4, 4), c = this.nz(-4, 4);
+                    let r = this.nz(-4, 4), s = this.nz(-4, 4);
+                    while (s === r) s = this.nz(-4, 4);
+                    const k = -(a*r*r*r + b*r*r + c*r);
+                    const R = a*s*s*s + b*s*s + c*s + k;
+                    ansTex = String(R);
+                    const lead = (a === 1 ? '' : String(a)) + 'x^3';
+                    qText = `\\text{Let } f(x) = ${lead}${this.st(b,'x^2')}${this.st(c,'x')} + k \\text{, where } k \\text{ is a constant. If } f(x) \\text{ is divisible by } ${this.linFactor(r)}, \\text{ find the remainder when } f(x) \\text{ is divided by } ${this.linFactor(s)}`;
+                    opts = this.opts4(ansTex, [String(R+1), String(R-1), String(R+2), String(R-2), String(R+3)]);
+                } else if (type === 3) {
+                    // Q59 (18-P2-Q8): g(x) = x^n + a x^m + b divisible by x-1 -> remainder at x+1 is -2a
+                    const n = [8, 10, 12][this.rand(0, 2)];
+                    const m = [5, 7, 9, 11][this.rand(0, 3)];
+                    ansTex = this.numLetter(-2, 'a');
+                    qText = `\\text{Let } g(x) = x^${n}+ax^${m}+b \\text{, where } a \\text{ and } b \\text{ are constants. If } g(x) \\text{ is divisible by } x-1 \\text{, find the remainder when } g(x) \\text{ is divided by } x+1`;
+                    instruction = "Find the remainder.";
+                    opts = this.opts4(ansTex, ['0', this.numLetter(2, 'a'), this.numLetter(-2, 'a') + '+2']);
+                    vars = ['a'];
+                } else if (type === 4) {
+                    // Q60 (19-P2-Q9): x^4 + kx^3 + Bx^2 + Cx + D divisible by 2x+k -> find k
+                    const k = [2, 4, 6, 8][this.rand(0, 3)];
+                    const B = [-8, -6, -4, -2][this.rand(0, 3)];
+                    const C = this.nz(-10, 10);
+                    const D = k*k*k*k/16 - B*k*k/4 + C*k/2;
+                    ansTex = String(k);
+                    qText = `\\text{Let } k \\text{ be a constant such that } x^4+kx^3${this.st(B,'x^2')}${this.st(C,'x')}${this.st(D,'')} \\text{ is divisible by } 2x+k. \\text{ Find } k`;
+                    instruction = "Find the value of k.";
+                    opts = this.opts4(ansTex, [String(-k), String(k/2), String(2*k), String(k+2), String(k-2)]);
+                } else if (type === 5) {
+                    // Q61 (20-P2-Q6): g(x) = ax^3 + Aa x^2 + C, (x+r) is a factor -> g(s)
+                    let r = 0, A = 0, C = 0, a = 0, s = 0, gs = 0;
+                    for (let t = 0; t < 60; t++) {
+                        r = this.nz(-3, 3);
+                        A = this.nz(2, 6);
+                        const div = r*r*r - A*r*r;
+                        if (div === 0) continue;
+                        a = this.nz(2, 4);
+                        C = div * a;
+                        s = this.nz(-4, 4);
+                        if (s === -r) continue;
+                        gs = a*(s*s*s + A*s*s) + C;
+                        if (gs === 0) continue;
+                        break;
+                    }
+                    ansTex = String(gs);
+                    qText = `\\text{Let } g(x) = ax^3${this.nl(A,'a','x^2')}${this.st(C,'')} \\text{, where } a \\text{ is a constant. If } ${this.linFactor(r)} \\text{ is a factor of } g(x) \\text{, then } g(${s}) =`;
+                    instruction = `Find the value of g(${s}).`;
+                    opts = this.opts4(ansTex, ['0', String(gs+1), String(gs-1), String(gs+2), String(gs-2), String(gs*2)]);
+                    vars = ['a'];
+                } else if (type === 6) {
+                    // Q62 (21-P2-Q8): p ÷ (x+1) remainder -2m, divisible by x-1 -> remainder by x^2-1 is m(x-1)
+                    const m = this.rand(1, 4);
+                    const rRem = -2*m;
+                    ansTex = (m === 1 ? '' : String(m)) + 'x-' + m;
+                    qText = `\\text{Let } p(x) \\text{ be a polynomial. When } p(x) \\text{ is divided by } x+1 \\text{, the remainder is } ${rRem}. \\text{ If } p(x) \\text{ is divisible by } x-1 \\text{, find the remainder when } p(x) \\text{ is divided by } x^2-1`;
+                    instruction = "Find the remainder.";
+                    opts = this.opts4(ansTex, [(m===1?'':String(m))+'x+'+m, '-'+(m===1?'':String(m))+'x+'+m, (m+1)+'x-'+m, (m===1?'':String(m))+'x-'+(m+1)]);
+                } else if (type === 7) {
+                    // Q63 (22-P2-Q9): g(x)=x^2+ax+b divisible by x+pa -> remainder by x-qa
+                    let p = this.nz(1, 4), q = this.nz(1, 4);
+                    while (q === p) q = this.nz(1, 4);
+                    let C = q*q + q - p*p + p;
+                    while (C === 0) { p = this.nz(1, 4); q = this.nz(1, 4); while (q === p) q = this.nz(1, 4); C = q*q + q - p*p + p; }
+                    ansTex = this.numLetter(C, 'a^2');
+                    qText = `\\text{Let } g(x) = x^2 + ax + b \\text{, where } a \\text{ and } b \\text{ are constants. If } g(x) \\text{ is divisible by } x+${p}a \\text{, find the remainder when } g(x) \\text{ is divided by } x-${q}a`;
+                    instruction = "Find the remainder.";
+                    opts = this.opts4(ansTex, [this.numLetter(C+2,'a^2'), this.numLetter(C-2,'a^2'), this.numLetter(-C,'a^2'), this.numLetter(C+4,'a^2'), this.numLetter(C*2,'a^2')]);
+                    vars = ['a'];
+                } else if (type === 8) {
+                    // Q64 (23-P2-Q9): h(x) = a x^6 + n x^3 + b divisible by 2x-r -> remainder by 2x+r = -n r^3/4
+                    const n = [4, 8, 16][this.rand(0, 2)];
+                    const r = [2, 3, 4][this.rand(0, 2)];
+                    const R = -n*r*r*r/4;
+                    ansTex = String(R);
+                    qText = `\\text{Let } h(x) = ax^6 + ${n}x^3 + b \\text{, where } a \\text{ and } b \\text{ are constants. If } h(x) \\text{ is divisible by } 2x-${r} \\text{, find the remainder when } h(x) \\text{ is divided by } 2x+${r}`;
+                    opts = this.opts4(ansTex, [String(R+1), String(R-1), String(R+2), String(R-2), String(R*2), String(Math.round(R/2))]);
+                } else if (type === 9) {
+                    // Q65 (24-P2-Q9): f(x)=x^3+k x^2+b x+c divisible by x+k -> k=c/b, remainder by (x-s) = f(s)
+                    const b = this.nz(2, 5), kk = this.nz(1, 3);
+                    const cc = b*kk;
+                    let s = this.nz(-4, 4);
+                    while (s === -kk) s = this.nz(-4, 4);
+                    const R = s*s*s + kk*s*s + b*s + cc;
+                    ansTex = String(R);
+                    qText = `\\text{Let } f(x) = x^3 + kx^2 + ${b}x + ${cc} \\text{, where } k \\text{ is a constant. If } f(x) \\text{ is divisible by } x+k \\text{, find the remainder when } f(x) \\text{ is divided by } ${this.linFactor(s)}`;
+                    opts = this.opts4(ansTex, [String(R+1), String(R-1), String(R+2), String(R-2), String(R+3)]);
+                } else {
+                    // Q66 (25-P2-Q9): p(x) = nx^3 + cn x + C, (x+r) is a factor -> p(s)
+                    let r = 0, c = 0, n = 0, C = 0, s = 0, ps = 0;
+                    for (let t = 0; t < 60; t++) {
+                        r = [2, 3][this.rand(0, 1)];
+                        c = this.nz(-3, 3);
+                        const div = r*r*r + c*r;
+                        if (div === 0) continue;
+                        n = this.nz(2, 4);
+                        C = div * n;
+                        s = this.nz(-4, 4);
+                        if (s === -r || s === r) continue;
+                        ps = n*(s*s*s + c*s) + C;
+                        if (ps === 0) continue;
+                        break;
+                    }
+                    ansTex = String(ps);
+                    qText = `\\text{Let } p(x) = nx^3${this.nl(c,'n','x')}${this.st(C,'')} \\text{, where } n \\text{ is a constant. If } ${this.linFactor(r)} \\text{ is a factor of } p(x) \\text{, then } p(${s}) =`;
+                    instruction = `Find the value of p(${s}).`;
+                    opts = this.opts4(ansTex, ['0', String(ps+1), String(ps-1), String(ps+2), String(ps-2)]);
+                    vars = ['n'];
+                }
+
+                return {
+                    instruction: instruction,
+                    paper: 'Paper 2',
+                    src: SRCS[type],
+                    text: `$ ${qText} $`, answerStr: ansTex, mcAnswerStr: ansTex,
+                    variables: vars, options: opts,
+                    firstStepLaw: law
+                };
+            },
+
+            // ============ PAPER 1 QUESTION BANK (2013 ONWARDS ONLY — Q8-Q20, no 2011/2012) ============
+            // Each builder is a full DSE Paper 1 question. Level 2 uses part (a) only;
+            // Level 3 uses the full (a)(b)(c) set.
+            P1_SRC: [
+                'P1 Q10 · HKDSE 15-P1-Q11',
+                'P1 Q11 · HKDSE 16-P1-Q14',
+                'P1 Q12 · HKDSE 17-P1-Q14',
+                'P1 Q13 · HKDSE 18-P1-Q12',
+                'P1 Q14 · HKDSE 19-P1-Q11',
+                'P1 Q15 · HKDSE 20-P1-Q13',
+                'P1 Q16 · HKDSE 21-P1-Q12',
+                'P1 Q17 · HKDSE 22-P1-Q14',
+                'P1 Q18 · HKDSE 23-P1-Q13',
+                'P1 Q19 · HKDSE 24-P1-Q14',
+                'P1 Q20 · HKDSE 25-P1-Q10',
+                'P1 Q8 · HKDSE 13-P1-Q12',
+                'P1 Q9 · HKDSE 14-P1-Q7'
+            ],
+            P1_INSTR: [
+                'Find the values of h and k.',
+                'Find the values of l, m and n.',
+                'Find the value of a.',
+                'Find the values of a and b.',
+                'Find the quotient.',
+                'Find the value of k.',
+                'Find the value of c.',
+                'Find the values of a and b.',
+                'Find the quotient.',
+                'Write down the value of p.',
+                'Find the values of h and k.',
+                'Find the values of a, b and c.',
+                'Is x+1 a factor of f(x)? (Yes/No)'
+            ],
+            p1Builder: function(t) {
+                const fns = [this.p1_15, this.p1_16, this.p1_17, this.p1_18, this.p1_19,
+                             this.p1_20, this.p1_21, this.p1_22, this.p1_23, this.p1_24,
+                             this.p1_25, this.p1_13, this.p1_14];
+                return fns[t].call(this);
+            },
+
+            // T0: 15-P1-Q11 — f(x)=(x-2)^2(x+h)+k, f(2)=R, divisible by x-3 -> find h,k; all roots integers?
+            p1_15: function() {
+                const R = this.rand(-9, 9);
+                const h = -3 - R;
+                const k = R;
+                const src = this.P1_SRC[0];
+                const disc = R*(R+4);
+                let claimB = 'no';
+                if (disc >= 0 && this.isSquare(disc)) {
+                    const sq = Math.sqrt(disc);
+                    const r1 = ((4+R) + sq)/2, r2 = ((4+R) - sq)/2;
+                    if (Number.isInteger(r1) && Number.isInteger(r2)) claimB = 'yes';
+                }
+                const aTex = `\\text{Let } f(x) = (x-2)^2(x+h)+k \\text{, where } h \\text{ and } k \\text{ are constants. When } f(x) \\text{ is divided by } x-2 \\text{, the remainder is } ${R} \\text{. It is given that } f(x) \\text{ is divisible by } x-3 \\text{. Find } h \\text{ and } k`;
+                const bTex = `\\text{Someone claims that all the roots of the equation } f(x)=0 \\text{ are integers. Do you agree? (Yes/No)}`;
+                const pa = this.part(aTex, `h=${h},k=${k}`, `h=${h},k=${k}`, [], ['h','k'], 'remainder_theorem', src);
+                pa.multi = true;
+                pa.options = this.multiOpts(pa.answerStr);
+                const pb = this.part(bTex, claimB, claimB, [], ['yes','no'], 'use_a', src);
+                pb.acceptList = ['yes','no'];
+                pb.options = this.ynOpts(claimB);
+                return { src, parts: [pa, pb] };
+            },
+
+            // T1: 16-P1-Q14 — p=(lx^2+5x+8)(2x^2+mx+n), equal remainders at ±2 -> find l,m,n; how many real roots?
+            p1_16: function() {
+                const C3 = [-8, -5, -2, 1, 7, 13][this.rand(0, 5)];
+                const l = 3, m = (C3 - 10) / 3, n = (16 - 4*C3) / 3;
+                const src = this.P1_SRC[1];
+                const disc2 = m*m - 8*n;
+                const realRoots = disc2 > 0 ? 2 : (disc2 === 0 ? 1 : 0);
+                const aTex = `\\text{Let } p(x) = 6x^4${this.st(C3,'x^3')}+ax^2+bx+c \\text{, where } a, b \\text{ and } c \\text{ are constants. When } p(x) \\text{ is divided by } x+2 \\text{ and when } p(x) \\text{ is divided by } x-2 \\text{, the two remainders are equal. It is given that } p(x) = (lx^2+5x+8)(2x^2+mx+n) \\text{, where } l, m \\text{ and } n \\text{ are constants. Find } l, m \\text{ and } n`;
+                const bTex = `\\text{How many real roots does the equation } p(x)=0 \\text{ have?}`;
+                const pa = this.part(aTex, `l=${l},m=${m},n=${n}`, `l=${l},m=${m},n=${n}`, [], ['l','m','n'], 'remainder_theorem', src);
+                pa.multi = true;
+                pa.options = this.multiOpts(pa.answerStr);
+                const pb = this.part(bTex, String(realRoots), String(realRoots), [String(realRoots+1), String(Math.max(0, realRoots-1)), String(realRoots+2), '3'], ['x'], 'use_a', src);
+                return { src, parts: [pa, pb] };
+            },
+
+            // T2: 17-P1-Q14 — f ÷ (2x^2+ax+4) quotient 3x+q remainder rx+s -> find a; all roots of f-g integers?
+            p1_17: function() {
+                let q = 0, a = 0, r = 0, s = 0, A = 0, B = 0, C = 0;
+                for (let t = 0; t < 60; t++) {
+                    q = [4, 5, 6, 7, 8, 9][this.rand(0, 5)];
+                    a = [-9, -6, -3, 3, 6, 9][this.rand(0, 5)];
+                    A = 2*q + 3*a;
+                    if (A === 0) continue;
+                    r = this.nz(-5, 5);
+                    B = a*q + 12 + r;
+                    if (B === 0) continue;
+                    s = this.nz(-5, 5);
+                    C = 4*q + s;
+                    if (C === 0) continue;
+                    break;
+                }
+                const src = this.P1_SRC[2];
+                let claimB = false;
+                if (q % 3 === 0) {
+                    const D = a*a - 32;
+                    if (D >= 0 && this.isSquare(D)) {
+                        const sq = Math.sqrt(D);
+                        const r1 = (-a + sq)/4, r2 = (-a - sq)/4;
+                        claimB = Number.isInteger(r1) && Number.isInteger(r2);
+                    }
+                }
+                const remTex = `${this.numLetter(r,'x')}${this.st(s,'')}`;
+                const aTex = `\\text{Let } f(x) = 6x^3${this.st(A,'x^2')}${this.st(B,'x')}${this.st(C,'')} \\text{. When } f(x) \\text{ is divided by } 2x^2+ax+4 \\text{, the quotient and the remainder are } 3x+${q} \\text{ and } ${remTex} \\text{ respectively, where } a \\text{ is a constant. Find } a`;
+                const bTex = `\\text{Let } g(x) \\text{ be a quadratic polynomial such that when } g(x) \\text{ is divided by } 2x^2+ax+4 \\text{, the remainder is } ${remTex} \\text{. Someone claims that all the roots of the equation } f(x)-g(x)=0 \\text{ are integers. Do you agree? (Yes/No)}`;
+                const pa = this.part(aTex, String(a), String(a), [String(a+1), String(a-1), String(a+2), String(a-2), String(-a)], ['a'], 'remainder_theorem', src);
+                const pb = this.part(bTex, claimB ? 'yes' : 'no', claimB ? 'yes' : 'no', [], ['yes','no'], 'use_a', src);
+                pb.acceptList = ['yes','no'];
+                pb.options = this.ynOpts(claimB ? 'yes' : 'no');
+                return { src, parts: [pa, pb] };
+            },
+
+            // T3: 18-P1-Q12 — f(x)=(x+1)^2(x^2+ax+b), x-3 factor, ÷(x+2) remainder 2b+R -> find a,b; irrational root?
+            p1_18: function() {
+                const R = [115, 125, 135, 145, 155, 165, 175, 185, 195][this.rand(0, 8)];
+                const a = R - 13, b = 30 - 3*R;
+                const src = this.P1_SRC[3];
+                const aTex = `\\text{Let } f(x) = (x+1)^2(x^2+ax+b) \\text{, where } a \\text{ and } b \\text{ are constants. It is given that } x-3 \\text{ is a factor of } f(x) \\text{. When } f(x) \\text{ is divided by } x+2 \\text{, the remainder is } 2b+${R} \\text{. Find } a \\text{ and } b`;
+                const bTex = `\\text{Factorize } f(x) \\text{ completely}`;
+                const pa = this.part(aTex, `a=${a},b=${b}`, `a=${a},b=${b}`, [], ['a','b'], 'factor_theorem', src);
+                pa.multi = true;
+                pa.options = this.multiOpts(pa.answerStr);
+                const bAns = this.factorize([-1, -1, 3, 10 - R]);
+                const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
+                pb.options = this.factorOpts(bAns);
+                return { src, parts: [pa, pb] };
+            },
+
+            // T4: 19-P1-Q11 — p(x)=(2x^2+9x+14)(ax+b), remainders R1 at x-1, R2 at x+2 -> find quotient; factorize
+            p1_19: function() {
+                let a = 0, b = 0;
+                for (let t = 0; t < 60; t++) {
+                    a = this.nz(-5, 5);
+                    b = this.nz(-5, 5);
+                    if (a + b === 0) continue;
+                    if (b === 2*a) continue;
+                    break;
+                }
+                const R1 = 25*(a+b), R2 = 4*(b-2*a);
+                const src = this.P1_SRC[4];
+                const qAns = this.poly([a, b]);
+                const aTex = `\\text{Let } p(x) \\text{ be a cubic polynomial. When } p(x) \\text{ is divided by } x-1 \\text{, the remainder is } ${R1} \\text{. When } p(x) \\text{ is divided by } x+2 \\text{, the remainder is } ${R2} \\text{. It is given that } p(x) \\text{ is divisible by } 2x^2+9x+14 \\text{. Find the quotient when } p(x) \\text{ is divided by } 2x^2+9x+14`;
+                const bTex = `\\text{Factorize } p(x) \\text{ completely}`;
+                const pa = this.part(aTex, qAns, qAns, [this.poly([b,a]), this.poly([a,-b]), this.poly([-a,b]), this.poly([a,b+1])], ['x'], 'remainder_theorem', src);
+                const bAns = `(2x^2+9x+14)(${qAns})`;
+                const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
+                pb.options = this.factorOpts(bAns);
+                return { src, parts: [pa, pb] };
+            },
+
+            // T5: 20-P1-Q13 — f divisible by x-1, ÷(x^2-1) remainder kx+R -> find k; then factorize f completely
+            p1_20: function() {
+                let r2 = 2;
+                for (let t = 0; t < 60; t++) {
+                    r2 = this.nz(-5, 5);
+                    if (r2 === -3 || r2 === -1 || r2 === 0 || r2 === 1) continue;
+                    break;
+                }
+                const R = 2*r2 + 2;
+                const k = -R;
+                const src = this.P1_SRC[5];
+                const aTex = `\\text{The cubic polynomial } f(x) \\text{ is divisible by } x-1 \\text{. When } f(x) \\text{ is divided by } x^2-1 \\text{, the remainder is } kx${this.st(R,'')} \\text{, where } k \\text{ is a constant. Find } k`;
+                const bTex = `\\text{It is given that } x+3 \\text{ is a factor of } f(x) \\text{ and when } f(x) \\text{ is divided by } x \\text{, the remainder is } ${3*r2} \\text{. Factorize } f(x) \\text{ completely}`;
+                const pa = this.part(aTex, String(k), String(k), [String(k+1), String(k-1), String(k+2), String(k-2), String(R)], ['k'], 'factor_theorem', src);
+                const bAns = this.factorize([1, -3, r2]);
+                const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
+                pb.options = this.factorOpts(bAns);
+                return { src, parts: [pa, pb] };
+            },
+
+            // T6: 21-P1-Q12 — p=(x^2+x+1)Q+cx+c-1 divisible by x-5 -> find c; then factorize p completely
+            p1_21: function() {
+                const combos = [[1,2,-22],[1,-11,1],[2,0,-37],[2,13,-60],[3,-2,-52],[3,11,-75]];
+                const [A, B, D] = combos[this.rand(0, combos.length - 1)];
+                const c = (7*(9*A - 3*B + D) - 1) / 2;
+                const src = this.P1_SRC[6];
+                const v = 3*A + B, w = 22*A + 3*B + D;
+                const disc = v*v - 4*A*w;
+                const aTex = `\\text{The polynomial } p(x) \\text{ is divisible by } x-5 \\text{. When } p(x) \\text{ is divided by } x^2+x+1 \\text{, the quotient and the remainder are } ${this.poly([A,B,D])} \\text{ and } cx+c-1 \\text{ respectively, where } c \\text{ is a constant. Find } c`;
+                const bTex = `\\text{It is given that } x+3 \\text{ is a factor of } p(x) \\text{. Factorize } p(x) \\text{ completely}`;
+                const pa = this.part(aTex, String(c), String(c), [String(c+1), String(c-1), String(c+2), String(c-2), String(c+4)], ['c'], 'remainder_theorem', src);
+                let bAns = '';
+                if (A === 1 && disc >= 0 && this.isSquare(disc)) {
+                    const sq = Math.sqrt(disc);
+                    const r1 = (-v + sq)/2, r2 = (-v - sq)/2;
+                    bAns = this.factorize([5, -3, r1, r2]);
+                } else {
+                    bAns = `(x-5)(x+3)(${this.poly([A, v, w])})`;
+                }
+                const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
+                pb.options = this.factorOpts(bAns);
+                return { src, parts: [pa, pb] };
+            },
+
+            // T7: 22-P1-Q14 — p=2x^3+ax^2+bx+C ÷ (x^2-2x+3) remainder dx+e -> find a,b; then factorize p completely
+            p1_22: function() {
+                const combos = [[2,1],[4,3],[4,4],[6,5],[6,9]];
+                const [s, t] = combos[this.rand(0, combos.length - 1)];
+                const A = -2*s - 10, B = 10*s + 2*t, C = -10*t;
+                const d = B + 2*A + 2, e = C - 3*A - 12;
+                const src = this.P1_SRC[7];
+                const sq = Math.sqrt(s*s - 4*t);
+                const r2 = (s + sq)/2, r3 = (s - sq)/2;
+                const remTex = `${this.numLetter(d,'x')}${this.st(e,'')}`;
+                const aTex = `\\text{Let } p(x) = 2x^3+ax^2+bx${this.st(C,'')} \\text{, where } a \\text{ and } b \\text{ are constants. When } p(x) \\text{ is divided by } x^2-2x+3 \\text{, the remainder is } ${remTex} \\text{. Find } a \\text{ and } b`;
+                const bTex = `\\text{Hence factorize } p(x) \\text{ completely}`;
+                const pa = this.part(aTex, `a=${A},b=${B}`, `a=${A},b=${B}`, [], ['a','b'], 'factor_theorem', src);
+                pa.multi = true;
+                pa.options = this.multiOpts(pa.answerStr);
+                const bAns = '2' + this.factorize([5, r2, r3]);
+                const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
+                pb.options = this.factorOpts(bAns);
+                return { src, parts: [pa, pb] };
+            },
+
+            // T8: 23-P1-Q13 — h=(3x+m)(g+1) with g=x^3+5x^2-12x-1, quotient = remainder -> find quotient; factorize h
+            p1_23: function() {
+                const m = [2, 4, 6, 8, 10][this.rand(0, 4)];
+                const B = 5*m - 36, b = -12*m;
+                const src = this.P1_SRC[8];
+                const qAns = `3x+${m}`;
+                const aTex = `\\text{Define } g(x) = x^3+5x^2-12x-1 \\text{. Let } h(x) = 3x^4+ax^3${this.st(B,'x^2')}${this.st(b,'x')}+c \\text{, where } a, b \\text{ and } c \\text{ are constants. When } h(x) \\text{ is divided by } g(x) \\text{, the quotient and the remainder are equal. Find the quotient when } h(x) \\text{ is divided by } g(x)`;
+                const bTex = `\\text{Factorize } h(x) \\text{ completely}`;
+                const pa = this.part(aTex, qAns, qAns, [`3x-${m}`, `${m}x+3`, `3x+${m+1}`, `x+${m}`], ['x'], 'remainder_theorem', src);
+                const bAns = `x(3x+${m})(x^2+5x-12)`;
+                const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
+                pb.options = this.factorOpts(bAns);
+                return { src, parts: [pa, pb] };
+            },
+
+            // T9: 24-P1-Q14 — F=(6x^2+x+p)(qx^2+rx-10), constant term C0 -> write p; find q,r; factorize F completely
+            p1_24: function() {
+                let p = 0, U = 0, q = 0, r = 0, R1 = 0, C0 = 0;
+                for (let t = 0; t < 60; t++) {
+                    p = [-2, -3, -4, -5][this.rand(0, 3)];
+                    C0 = -10*p;
+                    U = [-11, -8, -5, -2, 1, 4, 7][this.rand(0, 6)];
+                    if (U === -5) continue;
+                    q = (5+U)/3;
+                    r = 5 - 2*q;
+                    if (r === 0) continue;
+                    R1 = (5+p)*(U-10);
+                    if (R1 === 0) continue;
+                    break;
+                }
+                const src = this.P1_SRC[9];
+                const splitMap = { '-2': '(2x-1)(3x+2)', '-5': '(6x-5)(x+1)' };
+                const first = splitMap[String(p)] || `(6x^2+x${this.st(p,'')})`;
+                const aTex = `\\text{Let } F(x) = (6x^2+x+p)(qx^2+rx-10) \\text{, where } p, q \\text{ and } r \\text{ are constants. The constant term of } F(x) \\text{ is } ${C0} \\text{. Write down the value of } p`;
+                const bTex = `\\text{When } F(x) \\text{ is divided by } x+1 \\text{, the remainder is } ${R1} \\text{. It is given that } x-2 \\text{ is a factor of } F(x) \\text{. Find } q \\text{ and } r`;
+                const cTex = `\\text{Factorize } F(x) \\text{ completely}`;
+                const pa = this.part(aTex, String(p), String(p), [String(p+1), String(p-1), String(p+2), String(p-2), String(-p)], ['p'], 'factor_theorem', src);
+                const pb = this.part(bTex, `q=${q},r=${r}`, `q=${q},r=${r}`, [], ['q','r'], 'factor_theorem', src);
+                pb.multi = true;
+                pb.options = this.multiOpts(pb.answerStr);
+                const cAns = `(x-2)(${this.poly([q, 5])})${first}`;
+                const pc = this.part(cTex, cAns, cAns, [], ['x'], 'use_a', src);
+                pc.options = this.factorOpts(cAns);
+                return { src, parts: [pa, pb, pc] };
+            },
+
+            // T10: 25-P1-Q10 — f=2x^3+hx^2+kx+C, f(-2)=R, divisible by 2x-5 -> find h,k; then factorize f completely
+            p1_25: function() {
+                let C = 0, h = 0, k = 0, R = 0;
+                const pool = {15:[-13,-11,-9,-7], 25:[-13,-11], 35:[-13,-11], 45:[-13]};
+                for (let t = 0; t < 60; t++) {
+                    C = [15, 25, 35, 45][this.rand(0, 3)];
+                    h = pool[C][this.rand(0, pool[C].length - 1)];
+                    const M = -25 - 4*C/5;
+                    const N = (9*h - M)/2;
+                    k = 2*h - N;
+                    R = 2*N - 16 + C;
+                    if (k === 0 || R === 0) continue;
+                    break;
+                }
+                const src = this.P1_SRC[10];
+                const u = (h+5)/2, v = -C/5;
+                const disc = u*u - 4*v;
+                const aTex = `\\text{Let } f(x) = 2x^3+hx^2+kx+${C} \\text{, where } h \\text{ and } k \\text{ are constants. When } f(x) \\text{ is divided by } x+2 \\text{, the remainder is } ${R} \\text{. It is given that } f(x) \\text{ is divisible by } 2x-5 \\text{. Find } h \\text{ and } k`;
+                const bTex = `\\text{Factorize } f(x) \\text{ completely}`;
+                const pa = this.part(aTex, `h=${h},k=${k}`, `h=${h},k=${k}`, [], ['h','k'], 'factor_theorem', src);
+                pa.multi = true;
+                pa.options = this.multiOpts(pa.answerStr);
+                let bAns = '';
+                if (disc >= 0 && this.isSquare(disc)) {
+                    const sq = Math.sqrt(disc);
+                    const r1 = (-u + sq)/2, r2 = (-u - sq)/2;
+                    bAns = (Number.isInteger(r1) && Number.isInteger(r2))
+                        ? `(2x-5)` + this.factorize([r1, r2])
+                        : `(2x-5)(${this.poly([1, u, v])})`;
+                } else {
+                    bAns = `(2x-5)(${this.poly([1, u, v])})`;
+                }
+                const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
+                pb.options = this.factorOpts(bAns);
+                return { src, parts: [pa, pb] };
+            },
+
+            // T11: 13-P1-Q12 — f=3x^3+Ax^2+kx+C ≡ (x-2)(ax^2+bx+c) -> find a,b,c; then factorize f completely
+            p1_13: function() {
+                let A = 0, C = 0, b = 0, c = 0, k = 0;
+                for (let t = 0; t < 80; t++) {
+                    A = this.nz(-6, 6);
+                    if (A === -3 || A === -6) continue;
+                    C = [-12,-10,-8,-6,-4,-2,2,4,6,8,10,12][this.rand(0, 11)];
+                    if (C === -6) continue;
+                    b = A + 6;
+                    c = -C/2;
+                    if (b === c) continue;
+                    k = c - 2*b;
+                    if (k === 0) continue;
+                    if (C === -4*A - 24) continue;
+                    break;
+                }
+                const src = this.P1_SRC[11];
+                const aTex = `\\text{Let } f(x) = 3x^3${this.st(A,'x^2')}${this.st(k,'x')}${this.st(C,'')} \\text{, where } k \\text{ is a constant. It is given that } f(x) \\equiv (x-2)(ax^2+bx+c) \\text{, where } a, b \\text{ and } c \\text{ are constants. Find } a, b \\text{ and } c`;
+                const bTex = `\\text{Hence factorize } f(x) \\text{ completely}`;
+                const pa = this.part(aTex, `a=3,b=${b},c=${c}`, `a=3,b=${b},c=${c}`, [], ['a','b','c'], 'factor_theorem', src);
+                pa.multi = true;
+                pa.options = this.multiOpts(pa.answerStr);
+                let bAns = '';
+                let vFound = null;
+                for (let vv = -20; vv <= 20; vv++) {
+                    if (3*vv*vv + b*vv + c === 0) { vFound = vv; break; }
+                }
+                if (vFound !== null) {
+                    const u = -b - 3*vFound;
+                    bAns = '(x-2)' + this.linFactor(vFound) + '(' + this.poly([3, -u]) + ')';
+                } else {
+                    bAns = `(x-2)(${this.poly([3, b, c])})`;
+                }
+                const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
+                pb.options = this.factorOpts(bAns);
+                return { src, parts: [pa, pb] };
+            },
+
+            // T12: 14-P1-Q7 — f=4x^3+Ax^2+Bx+c, ÷(x-2) remainder R -> is x+1 a factor?; then factorize f completely
+            p1_14: function() {
+                const combos = [[2,1],[4,3],[4,4],[6,5],[6,9]];
+                const [s, t] = combos[this.rand(0, combos.length - 1)];
+                const A = 4 - 4*s, B = 4*(t - s), c4 = 4*t;
+                const R = 32 + 4*A + 2*B + c4;
+                const src = this.P1_SRC[12];
+                const sq = Math.sqrt(s*s - 4*t);
+                const r2 = (s + sq)/2, r3 = (s - sq)/2;
+                const aTex = `\\text{Let } f(x) = 4x^3${this.st(A,'x^2')}${this.st(B,'x')}+c \\text{, where } c \\text{ is a constant. When } f(x) \\text{ is divided by } x-2 \\text{, the remainder is } ${R} \\text{. Is } x+1 \\text{ a factor of } f(x) \\text{? (Yes/No)}`;
+                const bTex = `\\text{Hence factorize } f(x) \\text{ completely}`;
+                const pa = this.part(aTex, 'yes', 'yes', [], ['yes','no'], 'factor_theorem', src);
+                pa.acceptList = ['yes','no'];
+                pa.options = this.ynOpts('yes');
+                const bAns = '4' + this.factorize([-1, r2, r3]);
+                const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
+                pb.options = this.factorOpts(bAns);
+                return { src, parts: [pa, pb] };
+            },
+
+            // ============ LEVEL 2: PAPER 1 PART (a) FILL-IN (2013 ONWARDS) ============
+            generateL2: function(typeIdx) {
+                const type = typeIdx % 13;
+                const b = this.p1Builder(type);
+                const p0 = b.parts[0];
+                return {
+                    instruction: this.P1_INSTR[type],
+                    paper: 'Paper 1',
+                    src: b.src + ' (a)',
+                    text: `$ ${p0.displayTex} $`,
+                    answerStr: p0.answerStr,
+                    mcAnswerStr: p0.mcAnswerStr,
+                    variables: p0.variables,
+                    options: p0.options,
+                    firstStepLaw: p0.firstStepLaw,
+                    multi: !!p0.multi,
+                    acceptList: p0.acceptList
+                };
+            },
+
+            // ============ LEVEL 3: FULL PAPER 1 (a)(b)(c) SETS (2013 ONWARDS) ============
+            generateL3Set: function() {
+                const t = this.rand(0, 12);
+                return this.p1Builder(t).parts;
+            }
+        };
+
+        // --- ANSWER CANONICALIZATION (lenient checking, fractions supported) ---
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // Convert '\text{...}'-interleaved TeX into HTML prose with inline $...$
+        // math. The block is justified (both edges flush) and the browser wraps
+        // it onto as many lines as needed — no horizontal slider.
+        function texToHtml(tex) {
+            const inner = String(tex).replace(/^\$\s*/, '').replace(/\s*\$$/, '');
+            const parts = inner.split(/\\text\{([^}]*)\}/);
+            let html = '';
+            for (let i = 0; i < parts.length; i++) {
+                if (i % 2 === 1) {
+                    html += escapeHtml(parts[i]);
+                } else {
+                    const m = parts[i].trim();
+                    if (m) html += '$' + m + '$';
+                }
+            }
+            return html.replace(/\s+/g, ' ').trim();
+        }
+
+        function canonTerm(t) {
+            t = t.toLowerCase();
+            let sign = t.startsWith('-') ? '-' : '';
+            let body = t.replace(/^[+-]/, '');
+            const m = body.match(/^(\d*)([a-z](?:\^\d+)?)$/);
+            if (m) {
+                const coef = m[1] === '' ? '1' : m[1];
+                return sign + m[2] + (coef === '1' ? '' : '#' + coef);
+            }
+            const mm = body.match(/^(\d*)((?:[a-z](?:\^\d+)?)+)$/);
+            if (mm) {
+                const coef = mm[1] === '' ? '1' : mm[1];
+                const factors = mm[2].match(/[a-z](?:\^\d+)?/g).sort();
+                return sign + factors.join('') + (coef === '1' ? '' : '#' + coef);
+            }
+            return sign + body;
+        }
+
+        function canonPoly(str) {
+            let s = str.toLowerCase().replace(/\s+/g, '').replace(/\*/g, '');
+            let terms = s.match(/[+-]?[^+-]+/g) || [s];
+            terms = terms.map(canonTerm);
+            const key = (t) => {
+                const m = t.replace(/^[-+]/, '').match(/^([a-z])(?:\^(\d+))?/);
+                if (!m) return '~';
+                return m[1] + String(1000 - (m[2] ? parseInt(m[2]) : 1)).padStart(4, '0');
+            };
+            terms.sort((a, b) => key(a).localeCompare(key(b)));
+            return terms.join('');
+        }
+
+        function canonFactor(str) {
+            let s = str.toLowerCase().replace(/\s+/g, '').replace(/\*/g, '');
+            s = s.replace(/\(([^()]*)\)\^2/g, '($1)($1)');
+            const groups = s.match(/\(([^()]*)\)/g) || [];
+            if (!groups.length) return canonPoly(str);
+            let prefix = '';
+            const idx = s.indexOf('(');
+            const closeEnd = s.lastIndexOf(')') + 1;
+            if (idx > 0) prefix = s.slice(0, idx);
+            if (closeEnd < s.length) prefix += s.slice(closeEnd);
+
+            // Normalize the prefix: a numeric constant is folded into the groups
+            // (so 2(x-5)(x-1)(x-3) ≡ (2x-10)(x-1)(x-3)); a lone variable becomes
+            // a (x) group (so x(3x+4)(...) ≡ (x)(3x+4)(...)).
+            let k = 1;
+            if (/^-?\d+$/.test(prefix)) {
+                k = parseInt(prefix, 10);
+                prefix = '';
+            } else if (/^[a-z](\^\d+)?$/.test(prefix)) {
+                groups.push('(' + prefix + ')');
+                prefix = '';
+            }
+
+            const prims = groups.map(g => {
+                const inner = g.slice(1, -1);
+                const terms = inner.match(/[+-]?[^+-]+/g) || [inner];
+                const parsed = terms.map(t => {
+                    const sign = t[0] === '-' ? -1 : 1;
+                    const body = t.replace(/^[+-]/, '');
+                    const m = body.match(/^(\d*)([a-z](?:\^\d+)?)?$/);
+                    if (!m) return null;
+                    const coef = m[1] === '' ? 1 : parseInt(m[1], 10);
+                    return { c: sign * coef, sym: m[2] || '' };
+                });
+                if (parsed.some(p => p === null)) {
+                    return terms.map(canonTerm).sort((a, b) => a.localeCompare(b)).join('');
+                }
+                let g0 = null;
+                for (const p of parsed) g0 = (g0 === null) ? Math.abs(p.c) : MathGen.gcd(g0, p.c);
+                if (g0 > 1) {
+                    k *= g0;
+                    const scaled = parsed.map(p => ({ c: p.c / g0, sym: p.sym }));
+                    if (scaled.every(p => p.c <= 0)) {
+                        k *= -1;
+                        scaled.forEach(p => { p.c = -p.c; });
+                    }
+                    let out = '';
+                    scaled.forEach((p, i) => {
+                        if (p.c === 0) return;
+                        const abs = Math.abs(p.c) === 1 ? '' : Math.abs(p.c);
+                        const tm = p.sym === '' ? Math.abs(p.c) : abs + p.sym;
+                        out += (i === 0 ? (p.c < 0 ? '-' : '') : (p.c < 0 ? '-' : '+')) + tm;
+                    });
+                    return (out.match(/[+-]?[^+-]+/g) || [out]).map(canonTerm).sort((a, b) => a.localeCompare(b)).join('');
+                }
+                return terms.map(canonTerm).sort((a, b) => a.localeCompare(b)).join('');
+            });
+            prims.sort();
+            return (k === 1 ? '' : String(k)) + prims.map(i => `(${i})`).join('');
+        }
+
+        function canonFrac(str) {
+            let s = String(str).toLowerCase().replace(/\s+/g, '').replace(/\*/g, '');
+            if (!s.includes('/')) {
+                if (s.length > 2 && s[0] === '(' && s[s.length - 1] === ')') {
+                    let depth = 0, ok = true;
+                    for (let i = 0; i < s.length; i++) {
+                        if (s[i] === '(') depth++;
+                        else if (s[i] === ')') { depth--; if (depth === 0 && i < s.length - 1) ok = false; }
+                    }
+                    if (ok && depth === 0) s = s.slice(1, -1);
+                }
+                return canonFactor(s);
+            }
+            const parts = s.split('/');
+            if (parts.length !== 2) return s;
+            let [num, den] = parts;
+            let sign = '';
+            if (num.startsWith('-')) { sign = '-'; num = num.slice(1); }
+            if (den.startsWith('-')) { sign = (sign === '-' ? '' : '-'); den = den.slice(1); }
+            const strip = (w) => {
+                if (w.length >= 2 && w[0] === '(' && w[w.length - 1] === ')') {
+                    let depth = 0, wraps = true;
+                    for (let i = 0; i < w.length; i++) {
+                        if (w[i] === '(') depth++;
+                        else if (w[i] === ')') { depth--; if (depth === 0 && i < w.length - 1) wraps = false; }
+                    }
+                    if (wraps && depth === 0) return w.slice(1, -1);
+                }
+                return w;
+            };
+            return sign + 'FRAC' + canonFactor(strip(num)) + 'OVER' + canonFactor(strip(den));
+        }
+
+
+        // --- CORE GAME LOGIC ---
+
+        function login() {
+            const sClass = document.getElementById('student-class').value.trim().toUpperCase();
+            const sNo = document.getElementById('student-no').value.trim();
+            const sName = document.getElementById('student-name').value.trim();
+
+            if (!sClass || !sNo || !sName) {
+                showToast("Please fill in all details to start.", "error");
+                return;
+            }
+
+            studentProfile = { class: sClass, no: sNo, name: sName };
+            document.getElementById('display-name').textContent = `Welcome, ${sName}`;
+            document.getElementById('display-class').textContent = sClass;
+            document.getElementById('display-no').textContent = sNo;
+
+            loadScores();
+
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            
+            updatePassportUI();
+            showToast(`Welcome aboard, ${sName}!`, "success");
+        }
+
+        function logout() {
+            studentProfile = null;
+            document.getElementById('dashboard-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('student-class').value = '';
+            document.getElementById('student-no').value = '';
+            document.getElementById('student-name').value = '';
+        }
+
+        function updatePassportUI() {
+            for (let i = 1; i <= 3; i++) {
+                const statusEl = document.getElementById(`badge-status-${i}`);
+                const iconEl = document.getElementById(`badge-icon-${i}`);
+                const cardEl = document.getElementById(`badge-card-${i}`);
+                
+                if (badgeRecords[`level${i}`]) {
+                    statusEl.textContent = "Completed ✅";
+                    statusEl.className = "text-sm font-semibold text-green-400";
+                    iconEl.textContent = "🏆";
+                    cardEl.classList.add('border-amber-500');
+                } else {
+                    statusEl.textContent = "Not Attempted";
+                    statusEl.className = "text-sm font-semibold text-slate-500";
+                    iconEl.textContent = "🔒";
+                    cardEl.classList.remove('border-amber-500');
+                }
+            }
+            updateScoreboardUI();
+        }
+
+        // --- SCORE BOARD LOGIC ---
+        function getScoreStorageKey() {
+            if (!studentProfile) return null;
+            return `hkdse_polynomials_score_${studentProfile.class}_${studentProfile.no}_${studentProfile.name}`;
+        }
+
+        function loadScores() {
+            const key = getScoreStorageKey();
+            scoreTotals = { level1: 0, level2: 0, level3: 0 };
+            if (!key) return;
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw) {
+                    const saved = JSON.parse(raw);
+                    if (saved && typeof saved.level1 === 'number') scoreTotals = saved;
+                }
+            } catch (e) { console.log('loadScores error', e); }
+        }
+
+        function saveScores() {
+            const key = getScoreStorageKey();
+            if (!key) return;
+            try {
+                localStorage.setItem(key, JSON.stringify(scoreTotals));
+            } catch (e) { console.log('saveScores error', e); }
+        }
+
+        function updateScoreboardUI() {
+            document.getElementById('score-1').textContent = scoreTotals.level1;
+            document.getElementById('score-2').textContent = scoreTotals.level2;
+            document.getElementById('score-3').textContent = scoreTotals.level3;
+            document.getElementById('total-marks').textContent = scoreTotals.level1 + scoreTotals.level2 + scoreTotals.level3;
+        }
+
+        // Marks for the CURRENT attempt: full minus (hearts lost × per-heart)
+        function currentAttemptMarks() {
+            const cfg = MARKS[currentLevel];
+            if (!cfg) return 0;
+            const heartsLost = Math.max(0, LEVEL_LIVES[currentLevel] - lives);
+            return Math.max(0, cfg.full - heartsLost * cfg.perHeart);
+        }
+
+        function updateLiveScore() {
+            const el = document.getElementById('live-score');
+            if (el) el.textContent = currentAttemptMarks();
+        }
+
+        function resetBadges() {
+            if(confirm("Are you sure you want to reset your progress and marks?")) {
+                badgeRecords = { level1: false, level2: false, level3: false };
+                levelStats = { level1: { correct: 0, total: 0 }, level2: { correct: 0, total: 0 }, level3: { correct: 0, total: 0 } };
+                scoreTotals = { level1: 0, level2: 0, level3: 0 };
+                saveScores();
+                updatePassportUI();
+                showToast("Progress and marks reset.", "info");
+            }
+        }
+
+        function startGame(level) {
+            currentLevel = level;
+            document.getElementById('dashboard-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            
+            const levelColors = ['text-green-400', 'text-amber-400', 'text-red-400'];
+            document.getElementById('level-indicator').className = `font-bold ${levelColors[level-1]}`;
+            document.getElementById('level-indicator').textContent = `Level ${level}`;
+
+            lives = LEVEL_LIVES[level];
+            currentQuestionIndex = 0;
+            currentQuestions = [];
+            currentSets = [];
+            currentSetIndex = 0;
+            activePart = null;
+            updateLiveScore();
+            
+            if (level === 3) {
+                // Level 3: multi-part identity sets; each set shown as (a)(b)(c) blocks on one page
+                const usedTexts = new Set();
+                const usedOpts = new Set();
+                const usedAns = new Set();
+                for (let i = 0; i < LEVEL3_SETS; i++) {
+                    let parts = null, tKey = null, oKey = null, aKey = null, tries = 0;
+                    do {
+                        parts = MathGen.generateL3Set();
+                        tKey = parts.map(p => p.displayTex).join('|');
+                        oKey = parts.map(p => [...p.options].sort().join('~')).join('|');
+                        aKey = parts.map(p => p.answerStr).join('|');
+                        tries++;
+                    } while ((usedTexts.has(tKey) || usedOpts.has(oKey) || usedAns.has(aKey)) && tries < 100);
+                    usedTexts.add(tKey);
+                    usedOpts.add(oKey);
+                    usedAns.add(aKey);
+                    parts.forEach((part, pi) => {
+                        part.setNo = i + 1;
+                        part.partIdx = pi;
+                        part.partLabel = ['(a)', '(b)', '(c)'][pi];
+                        part.paper = 'Paper 1';
+                        part.done = false;
+                        // Paper 1 (Factor/Remainder theorem) questions are Conventional fill-in only.
+                        part.mode = 'fill';
+                    });
+                    currentSets.push(parts);
+                }
+                updateLivesUI();
+                renderSet();
+                return;
+            }
+            
+            // Levels 1 & 2: single questions (no duplicate questions, MC options or answers in a game).
+            // Level 2 draws 5 distinct Paper 1 part (a) types (fill-in only).
+            const usedTexts = new Set();
+            const usedOpts = new Set();
+            const usedAns = new Set();
+            let typeOrder = null;
+            if (level === 2) {
+                typeOrder = MathGen.shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]).slice(0, NUM_QUESTIONS);
+            }
+            for(let i=0; i<NUM_QUESTIONS; i++) {
+                let q = null, tKey = null, oKey = null, aKey = null, tries = 0;
+                do {
+                    const idx = (level === 1) ? MathGen.rand(0, 10) : (typeOrder ? typeOrder[i] : MathGen.rand(0, 12));
+                    q = (level === 1) ? MathGen.generateL1(idx) : MathGen.generateL2(idx);
+                    tKey = q.text;
+                    oKey = [...q.options].sort().join('~');
+                    aKey = q.answerStr;
+                    tries++;
+                } while ((usedTexts.has(tKey) || usedOpts.has(oKey) || usedAns.has(aKey)) && tries < 300);
+                usedTexts.add(tKey);
+                usedOpts.add(oKey);
+                usedAns.add(aKey);
+                currentQuestions.push(q);
+            }
+            
+            updateLivesUI();
+            renderQuestion();
+        }
+
+        function updateLivesUI() {
+            const container = document.getElementById('lives-container');
+            container.innerHTML = '';
+            for (let i = 0; i < lives; i++) {
+                container.innerHTML += '<span class="heart-bounce">❤️</span>';
+            }
+            for (let i = lives; i < LEVEL_LIVES[currentLevel]; i++) {
+                container.innerHTML += '<span class="opacity-30 grayscale">❤️</span>';
+            }
+        }
+
+        function renderQuestion() {
+            document.getElementById('q-counter').textContent = `${currentQuestionIndex + 1}/${currentQuestions.length}`;
+            const q = currentQuestions[currentQuestionIndex];
+            
+            // Ensure single-question UI is visible and L3 area hidden
+            document.getElementById('l3-area').classList.add('hidden');
+            document.getElementById('question-display').classList.remove('hidden');
+            
+            const displayEl = document.getElementById('question-display');
+            displayEl.innerHTML = texToHtml(q.text);
+            
+            document.getElementById('question-instruction').textContent = q.instruction;
+            document.getElementById('paper-hint').textContent = q.src || 'DSE Style Question';
+            
+            const partLabelEl = document.getElementById('part-label');
+            partLabelEl.textContent = '';
+            partLabelEl.classList.add('hidden');
+            
+            // Determine Mode for this specific question — family rule:
+            // Paper 1 questions (Factor / Remainder theorem) = Conventional fill-in;
+            // Paper 2 questions (remainder & factor theorem MCQ) = Multiple Choice.
+            currentQuestionMode = (q.paper === 'Paper 2') ? 'mc' : 'fill';
+
+            const mcArea = document.getElementById('mc-options');
+            const fillArea = document.getElementById('conventional-area');
+            const hint = document.getElementById('format-hint');
+
+            if (currentQuestionMode === 'mc') {
+                mcArea.classList.remove('hidden');
+                fillArea.classList.add('hidden');
+                hint.textContent = "Multiple Choice Mode";
+                
+                const btns = mcArea.querySelectorAll('button');
+                btns.forEach((btn, idx) => {
+                    btn.innerHTML = q.options[idx];
+                });
+            } else {
+                mcArea.classList.add('hidden');
+                fillArea.classList.remove('hidden');
+                hint.textContent = "Fill-in Mode";
+                
+                document.getElementById('conventional-input').value = '';
+                document.getElementById('math-preview').innerHTML = '\\( \\text{Empty} \\)';
+                
+                // Inject helper buttons based on variables
+                const helperBox = document.getElementById('helper-buttons');
+                helperBox.innerHTML = '';
+                q.variables.forEach(v => {
+                    helperBox.innerHTML += `<button onclick="insertAtCursor('${v}')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-amber-200 font-mono text-sm transition">${v}</button>`;
+                });
+                helperBox.innerHTML += `<button onclick="insertAtCursor('^')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white font-mono text-sm transition">^</button>`;
+                helperBox.innerHTML += `<button onclick="insertAtCursor('/')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white font-mono text-sm transition">/</button>`;
+                helperBox.innerHTML += `<button onclick="insertAtCursor('(')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white font-mono text-sm transition">(</button>`;
+                helperBox.innerHTML += `<button onclick="insertAtCursor(')')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white font-mono text-sm transition">)</button>`;
+                helperBox.innerHTML += `<button onclick="insertAtCursor('+')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white font-mono text-sm transition">+</button>`;
+                helperBox.innerHTML += `<button onclick="insertAtCursor('-')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white font-mono text-sm transition">-</button>`;
+            }
+
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+        }
+
+        // --- Level 3: render the whole question set as (a)(b)(c) blocks on one page ---
+        function renderSet() {
+            const set = currentSets[currentSetIndex];
+            document.getElementById('q-counter').textContent = `Set ${currentSetIndex + 1}/${currentSets.length}`;
+            document.getElementById('question-instruction').textContent = "Paper 1 question — answer all parts (a)(b)(c):";
+            document.getElementById('paper-hint').textContent = set[0].src || 'DSE Paper 2 Style · Multi-part Question';
+            document.getElementById('format-hint').textContent = set[0].mode === 'mc' ? 'Multiple Choice Mode' : 'Fill-in Mode';
+            
+            const partLabelEl = document.getElementById('part-label');
+            partLabelEl.textContent = '';
+            partLabelEl.classList.add('hidden');
+            
+            // Hide single-question UI, show L3 area
+            document.getElementById('question-display').classList.add('hidden');
+            document.getElementById('mc-options').classList.add('hidden');
+            document.getElementById('conventional-area').classList.add('hidden');
+            const l3Area = document.getElementById('l3-area');
+            l3Area.classList.remove('hidden');
+            
+            const blocksEl = document.getElementById('l3-blocks');
+            blocksEl.innerHTML = '';
+            
+            set.forEach((part, pi) => {
+                const block = document.createElement('div');
+                block.id = `l3-block-${pi}`;
+                block.className = `bg-slate-800/60 border ${part.done ? 'border-green-500/70' : 'border-slate-700'} rounded-2xl p-4 transition-all duration-300`;
+                blocksEl.appendChild(block);
+                rebuildL3Block(pi);
+            });
+            
+            if (window.MathJax) MathJax.typesetPromise();
+        }
+
+        function insertL3Char(pi, ch) {
+            const f = document.getElementById(`l3-input-${pi}`);
+            const start = f.selectionStart ?? f.value.length;
+            const end = f.selectionEnd ?? f.value.length;
+            f.value = f.value.substring(0, start) + ch + f.value.substring(end, f.value.length);
+            const pos = start + ch.length;
+            f.setSelectionRange(pos, pos);
+            f.focus();
+            updateL3Preview(pi);
+        }
+
+        function updateL3Preview(pi) {
+            const input = document.getElementById(`l3-input-${pi}`).value;
+            const previewBox = document.getElementById(`l3-preview-${pi}`);
+            if (!previewBox) return;
+            if (!input.trim()) {
+                previewBox.innerHTML = '\\( \\text{Empty} \\)';
+                if (window.MathJax) MathJax.typesetPromise([previewBox]);
+                return;
+            }
+            let texStr = input;
+            if (texStr.includes('/')) {
+                const parts = texStr.split('/');
+                if (parts.length === 2) texStr = `\\frac{${parts[0]}}{${parts[1]}}`;
+            }
+            texStr = texStr.replace(/\^([a-zA-Z0-9]+)/g, '^{$1}');
+            previewBox.innerHTML = `$ ${texStr} $`;
+            if (window.MathJax) MathJax.typesetPromise([previewBox]).catch(() => {});
+        }
+
+        function submitSetPartMC(pi, btnIdx) {
+            const set = currentSets[currentSetIndex];
+            const part = set[pi];
+            if (part.done) return;
+            activePart = part;
+            const isCorrect = (part.options[btnIdx] === `$ ${part.mcAnswerStr} $`);
+            processSetAnswer(pi, isCorrect);
+        }
+
+        function submitSetPartFill(pi) {
+            const set = currentSets[currentSetIndex];
+            const part = set[pi];
+            if (part.done) return;
+            activePart = part;
+            
+            const rawInput = document.getElementById(`l3-input-${pi}`).value;
+            if (!rawInput.trim()) {
+                showToast("Please enter an answer.", "info");
+                return;
+            }
+            const cleanInput = rawInput.toLowerCase().replace(/\s+/g, '').replace(/\*/g, '');
+            const isCorrect = checkFillAnswer(cleanInput, part);
+            processSetAnswer(pi, isCorrect);
+        }
+
+        function rebuildL3Block(pi) {
+            const part = currentSets[currentSetIndex][pi];
+            const block = document.getElementById(`l3-block-${pi}`);
+            if (!block) return;
+            let inner = '';
+            inner += `<div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-bold text-emerald-400">Part ${part.partLabel}</span>
+                <span id="l3-status-${pi}" class="${part.done ? 'text-green-400' : 'text-slate-400'} text-sm font-semibold">${part.done ? '✓ Correct' : ''}</span>
+            </div>`;
+            inner += `<div class="text-[11px] text-sky-400 font-semibold mb-1 text-left">${part.src || ''}</div>`;
+            inner += `<div id="l3-q-${pi}" class="text-base sm:text-lg text-white mb-3 text-justify leading-relaxed overflow-x-auto min-h-[40px]">${texToHtml(part.displayTex)}</div>`;
+            if (part.done) {
+                inner += `<div class="text-center text-green-400 text-sm py-2 font-semibold">Answer: $ ${part.mcAnswerStr} $</div>`;
+            } else if (part.mode === 'mc') {
+                inner += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="l3-mc-${pi}">`;
+                part.options.forEach((o, bi) => {
+                    inner += `<button onclick="submitSetPartMC(${pi}, ${bi})" class="option-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl p-3 text-lg transition-all shadow-md active:scale-95 min-h-[56px] flex items-center justify-center">${o}</button>`;
+                });
+                inner += `</div>`;
+            } else {
+                inner += `
+                <div class="flex gap-2 w-full">
+                    <input type="text" id="l3-input-${pi}" placeholder="e.g. (x+2)(x+3)" oninput="updateL3Preview(${pi})" onkeypress="if(event.key==='Enter')submitSetPartFill(${pi})" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-lg font-mono text-white outline-none focus:border-amber-500 transition shadow-inner">
+                    <button onclick="submitSetPartFill(${pi})" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 rounded-lg text-base transition shadow-md active:scale-95">Submit</button>
+                </div>
+                <div id="l3-helpers-${pi}" class="flex flex-wrap gap-2 justify-center w-full mt-2">`;
+                part.variables.forEach(v => {
+                    inner += `<button onclick="insertL3Char(${pi},'${v}')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-amber-200 font-mono text-sm transition">${v}</button>`;
+                });
+                ['^','/', '(',')','+','-'].forEach(op => {
+                    inner += `<button onclick="insertL3Char(${pi},'${op}')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white font-mono text-sm transition">${op}</button>`;
+                });
+                inner += `</div>
+                <div class="w-full p-3 bg-slate-900/60 border border-slate-700 rounded-lg text-center mt-2">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1 block">Live Math Preview</span>
+                    <div id="l3-preview-${pi}" class="text-lg text-slate-300 min-h-[28px] flex items-center justify-center">\\( \\text{Empty} \\)</div>
+                </div>`;
+            }
+            block.innerHTML = inner;
+            block.classList.remove('border-slate-700');
+            block.classList.add(part.done ? 'border-green-500/70' : 'border-slate-700');
+            if (window.MathJax) MathJax.typesetPromise([block]);
+        }
+
+        function processSetAnswer(pi, isCorrect) {
+            levelStats[`level${currentLevel}`].total++;
+            
+            if (isCorrect) {
+                levelStats[`level${currentLevel}`].correct++;
+                showToast(`Part ${currentSets[currentSetIndex][pi].partLabel} correct! Awesome job.`, "success");
+                
+                const set = currentSets[currentSetIndex];
+                set[pi].done = true;
+                rebuildL3Block(pi);
+                
+                if (set.every(p => p.done)) {
+                    setTimeout(() => {
+                        currentSetIndex++;
+                        if (currentSetIndex >= currentSets.length) {
+                            winGame();
+                        } else {
+                            renderSet();
+                        }
+                    }, 700);
+                }
+            } else {
+                showWrongReflectionModal();
+            }
+        }
+
+        function insertAtCursor(myValue) {
+            const myField = document.getElementById('conventional-input');
+            if (document.selection) {
+                myField.focus();
+                sel = document.selection.createRange();
+                sel.text = myValue;
+            } else if (myField.selectionStart || myField.selectionStart == '0') {
+                var startPos = myField.selectionStart;
+                var endPos = myField.selectionEnd;
+                myField.value = myField.value.substring(0, startPos) + myValue + myField.value.substring(endPos, myField.value.length);
+                myField.selectionStart = startPos + myValue.length;
+                myField.selectionEnd = startPos + myValue.length;
+            } else {
+                myField.value += myValue;
+            }
+            myField.focus();
+            updateLivePreview();
+        }
+
+        function handleEnter(e) {
+            if(e.key === 'Enter') submitFillAnswer();
+        }
+
+        function submitMCAnswer(btnIndex) {
+            const q = currentQuestions[currentQuestionIndex];
+            const selectedText = q.options[btnIndex];
+            const isCorrect = (selectedText === `$ ${q.mcAnswerStr} $`);
+            processAnswer(isCorrect);
+        }
+
+        // For answers containing fractions or powers: fraction form is required when the
+        // answer is a fraction; squared notation is required when the answer uses ^2.
+        function checkFillAnswer(cleanInput, q) {
+            if (q && q.acceptList) {
+                return q.acceptList.some(a => canonFrac(cleanInput) === canonFrac(a));
+            }
+            if (q && q.multi) return checkMultiAnswer(cleanInput, q);
+            const wantSquare = q.answerStr.includes('^2');
+            if (wantSquare && !cleanInput.includes('^2')) return false;
+            return canonFrac(cleanInput) === canonFrac(q.answerStr);
+        }
+
+        // Extract labeled assignments from 'h=-9,k=4' -> { h: -9, k: 4 }
+        function parsePairs(s) {
+            const out = {};
+            const re = /([a-z])=(-?\d+)/g;
+            let m;
+            while ((m = re.exec(s)) !== null) out[m[1]] = Number(m[2]);
+            return out;
+        }
+
+        // Multi-value answers (e.g. 'h=-9,k=4'): accept labeled pairs in any order,
+        // or a comma/; separated ordered list of bare numbers.
+        function checkMultiAnswer(clean, q) {
+            const want = parsePairs(q.answerStr);
+            const wantVars = Object.keys(want);
+            if (wantVars.length === 0) return false;
+            const got = parsePairs(clean);
+            if (Object.keys(got).length >= wantVars.length) {
+                for (const v of wantVars) {
+                    if (!(v in got)) return false;
+                    if (Math.abs(got[v] - want[v]) > 1e-9) return false;
+                }
+                return Object.keys(got).length === wantVars.length;
+            }
+            const nums = clean.split(/[,;]/).filter(s => s.trim() !== '');
+            if (nums.length !== wantVars.length) return false;
+            return nums.every((s, i) => /^-?\d+$/.test(s) && Math.abs(Number(s) - want[wantVars[i]]) <= 1e-9);
+        }
+
+        function submitFillAnswer() {
+            const q = currentQuestions[currentQuestionIndex];
+            const rawInput = document.getElementById('conventional-input').value;
+            
+            if(!rawInput.trim()) {
+                showToast("Please enter an answer.", "info");
+                return;
+            }
+
+            const cleanInput = rawInput.toLowerCase().replace(/\s+/g, '').replace(/\*/g, '');
+            const isCorrect = checkFillAnswer(cleanInput, q);
+            processAnswer(isCorrect);
+        }
+
+        function processAnswer(isCorrect) {
+            // Track total attempts for the current level
+            levelStats[`level${currentLevel}`].total++;
+            
+            if (isCorrect) {
+                // Track correct attempts
+                levelStats[`level${currentLevel}`].correct++;
+                showToast("Correct! Awesome job.", "success");
+                currentQuestionIndex++;
+                
+                if (currentQuestionIndex >= currentQuestions.length) {
+                    winGame();
+                } else {
+                    renderQuestion();
+                }
+            } else {
+                // Instantly pop up the wrong reflection modal before deducting life
+                showWrongReflectionModal();
+            }
+        }
+
+        function showWrongReflectionModal() {
+            const modal = document.getElementById('wrong-reflection-modal');
+            modal.classList.remove('hidden');
+            if(window.MathJax) MathJax.typesetPromise([modal]);
+        }
+
+        function submitWrongReflection(selectedLaw) {
+            const q = (currentLevel === 3) ? activePart : currentQuestions[currentQuestionIndex];
+            const actualLaw = q.firstStepLaw;
+
+            let isLawCorrect = (selectedLaw === actualLaw);
+            if (actualLaw === 'use_a' && selectedLaw !== '') isLawCorrect = true;
+
+            document.getElementById('wrong-reflection-modal').classList.add('hidden');
+
+            if (isLawCorrect) {
+                showToast("Good reflection! You identified the correct technique to start with.", "success");
+            } else {
+                showToast("Not quite! Remember to check the Formula sheet or ask AI Tutor.", "error");
+            }
+
+            // Deduct life and shake the game screen to indicate a mistake
+            lives--;
+            updateLivesUI();
+            updateLiveScore();
+            showWrongFeedback();
+            
+            const gameArea = document.getElementById('main-game-area');
+            gameArea.classList.add('shake');
+            setTimeout(() => gameArea.classList.remove('shake'), 400);
+
+            if (lives <= 0) {
+                setTimeout(() => {
+                    showToast("Mission Failed. Out of lives!", "error");
+                    quitGame();
+                }, 500);
+            }
+        }
+
+        function winGame() {
+            badgeRecords[`level${currentLevel}`] = true;
+            const earned = currentAttemptMarks();
+            scoreTotals[`level${currentLevel}`] += earned;
+            saveScores();
+            showToast(`Level ${currentLevel} Complete! +${earned} marks earned! 🏆`, "success");
+            quitGame();
+        }
+
+        function quitGame() {
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            updatePassportUI();
+        }
+
+        // Live Math Preview for Fill-in Mode
+        function updateLivePreview() {
+            const input = document.getElementById('conventional-input').value;
+            const previewBox = document.getElementById('math-preview');
+            
+            if(!input.trim()) {
+                previewBox.innerHTML = '\\( \\text{Empty} \\)';
+                if(window.MathJax) MathJax.typesetPromise([previewBox]);
+                return;
+            }
+
+            let texStr = input;
+            
+            // Simple parsing: a/b -> \frac{a}{b}
+            if(texStr.includes('/')) {
+                const parts = texStr.split('/');
+                if(parts.length === 2) {
+                    texStr = `\\frac{${parts[0]}}{${parts[1]}}`;
+                }
+            }
+            
+            // Reformat x^2 -> x^{2} for safety visually (MathJax handles x^2 fine mostly)
+            texStr = texStr.replace(/\^([a-zA-Z0-9]+)/g, '^{$1}');
+            
+            previewBox.innerHTML = `$ ${texStr} $`;
+            if (window.MathJax) {
+                MathJax.typesetPromise([previewBox]).catch(err => console.log('MathJax Error:', err));
+            }
+        }
+
+        // --- HELPER UI FUNCTIONS ---
+
+        function showToast(message, type) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 500);
+            }, 3000);
+        }
+
+        function showWrongFeedback() {
+            const el = document.getElementById('feedback-toast');
+            el.classList.remove('hidden');
+            setTimeout(() => {
+                el.classList.add('hidden');
+            }, 3000);
+        }
+
+        function toggleCheatSheet() {
+            const modal = document.getElementById('cheat-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        function closeAITutor() {
+            document.getElementById('ai-tutor-modal').classList.add('hidden');
+        }
+
+        function askAITutor() {
+            let q;
+            if (currentLevel === 3) {
+                q = activePart;
+                if (!q) {
+                    q = currentSets[currentSetIndex].find(p => !p.done) || currentSets[currentSetIndex][0];
+                }
+            } else {
+                q = currentQuestions[currentQuestionIndex];
+            }
+            let hint = "";
+            switch (q.firstStepLaw) {
+                case 'remainder_theorem':
+                    hint = "Substitute $x=k$ into $f(x)$: the remainder when $f(x)$ is divided by $(x-k)$ is exactly $f(k)$.";
+                    break;
+                case 'factor_theorem':
+                    hint = "$(x-k)$ is a factor of $f(x)$ if and only if $f(k)=0$. Set up $f(k)=0$ and solve for the unknown constant.";
+                    break;
+                case 'use_a':
+                    hint = "This is part (b) or (c)! Use the coefficient / factor you found in part (a) — divide $f(x)$ by that factor, then factor the remaining quadratic.";
+                    break;
+                default:
+                    hint = "Remember: remainder of $f(x)\\div(x-k)$ is $f(k)$, and $(x-k)$ is a factor exactly when $f(k)=0$.";
+            }
+
+            document.getElementById('ai-content-area').innerHTML = `
+                <div class="bg-slate-800/80 p-5 rounded-lg border border-purple-500/30 mb-4 shadow-inner">
+                    <p class="text-purple-300 font-semibold mb-2 text-lg">🤖 AI Hint specifically for this question:</p>
+                    <p class="text-white text-base">${hint}</p>
+                </div>
+                <div class="bg-slate-800/80 p-5 rounded-lg border border-slate-600 shadow-inner">
+                    <p class="text-amber-400 font-semibold mb-2 text-lg">💡 General Checklist:</p>
+                    <ul class="list-disc list-inside space-y-2 text-slate-300">
+                        <li>Remainder theorem: the remainder of \(f(x)\div(x-k)\) is simply \(f(k)\).</li>
+                        <li>Factor theorem: \((x-k)\) is a factor exactly when \(f(k)=0\).</li>
+                        <li>Factorising a cubic: divide out one known factor, then factor the quadratic.</li>
+                        <li>Roots: after factorising, each factor \((x-r)\) gives one root \(x=r\).</li>
+                    </ul>
+                </div>
+            `;
+            document.getElementById('ai-tutor-modal').classList.remove('hidden');
+            if(window.MathJax) MathJax.typesetPromise();
+        }
+
+        // --- REFLECTION & SUBMISSION LOGIC ---
+
+        function submitToTeacher() {
+            if (!studentProfile) return;
+            
+            const btn = document.getElementById('btn-submit-teacher');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Sending... ⏳';
+            btn.disabled = true;
+
+            const getPercent = (lvl) => {
+                const s = levelStats[lvl];
+                return s.total > 0 ? Math.round((s.correct / s.total) * 100) + "%" : "N/A";
+            };
+
+            const payload = {
+                timestamp: new Date().toISOString(),
+                topic: 'More about Polynomials (Factor & Remainder Theorem)',
+                class: studentProfile.class,
+                no: studentProfile.no,
+                name: studentProfile.name,
+                level1: badgeRecords.level1,
+                level1Percent: getPercent('level1'),
+                level1Marks: scoreTotals.level1,
+                level2: badgeRecords.level2,
+                level2Percent: getPercent('level2'),
+                level2Marks: scoreTotals.level2,
+                level3: badgeRecords.level3,
+                level3Percent: getPercent('level3'),
+                level3Marks: scoreTotals.level3,
+                totalMarks: scoreTotals.level1 + scoreTotals.level2 + scoreTotals.level3
+            };
+
+            // Send as text/plain (simple request, no CORS preflight) so we can read the
+            // Apps Script JSON response and confirm the row was actually written.
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'text/plain;charset=UTF-8',
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                if (data && data.status === 'success') {
+                    showToast("Data submitted to teacher successfully!", "success");
+                } else {
+                    showToast("Server replied but data not saved: " + (data && data.message ? data.message : 'unknown error'), "error");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast("Submission failed. Check your internet / Apps Script deployment.", "error");
+            })
+            .finally(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+        }
+    </script>
+</body>
+</html>
