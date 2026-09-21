@@ -14,6 +14,10 @@
     <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
+        /* Paper typography: question text in Times New Roman, unknowns italic */
+        #question-display, .qtext { font-family: 'Times New Roman', Times, serif; }
+        .mathvar { font-style: italic; }
+
         .glass-panel {
             background: rgba(30, 41, 59, 0.8);
             backdrop-filter: blur(12px);
@@ -280,7 +284,7 @@
                 </div>
             </div>
 
-            <div id="question-display" class="text-base sm:text-lg text-white mb-5 overflow-x-auto py-4 px-4 text-justify leading-relaxed min-h-[100px] w-full">
+            <div id="question-display" class="text-[14pt] text-white mb-5 overflow-x-auto py-4 px-4 text-justify leading-relaxed min-h-[100px] w-full">
                 <!-- MathJax renders here -->
             </div>
             
@@ -297,11 +301,8 @@
                     E.g. <span class='font-mono text-emerald-400'>x^2+5x+6</span> or <span class='font-mono text-emerald-400'>(x+2)(x+3)</span> or <span class='font-mono text-emerald-400'>(x+3)^2</span>
                 </p>
 
-                <div class="flex gap-2 w-full">
-                    <input type="text" id="conventional-input" placeholder="e.g. (x+2)(x+3)" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-lg font-mono text-white outline-none focus:border-amber-500 transition shadow-inner" oninput="updateLivePreview()" onkeypress="handleEnter(event)">
-                    <button onclick="submitFillAnswer()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-6 rounded-lg text-base transition shadow-md active:scale-95">
-                        Submit
-                    </button>
+                <div id="fill-bars" class="flex flex-col gap-2 w-full">
+                    <!-- labeled answer bars injected here: 'k = [input]', 'h = [input] k = [input]' ... -->
                 </div>
 
                 <div id="helper-buttons" class="flex flex-wrap gap-2 justify-center w-full mt-1">
@@ -403,6 +404,23 @@
         const GOOGLE_SCRIPT_URL =
             'https://script.google.com/macros/s/AKfycbwB1-LyitqptK90TCklrjuMO3qNHhib9Zlv4WuDDIUxpBr--0owbFg0iI985sJA4X8V/exec';
 
+        const APP_VERSION = '20260920-1';
+        (function watchAppVersion() {
+            const file = (location.pathname.split('/').pop() || '').split('?')[0];
+            const check = () => {
+                fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data[file] && data[file] !== APP_VERSION) location.reload();
+                    })
+                    .catch(() => {});
+            };
+            setInterval(check, 60000);
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') check();
+            });
+        })();
+
         let studentProfile = null;
         let badgeRecords = { level1: false, level2: false, level3: false };
         let currentLevel = 1;
@@ -413,6 +431,8 @@
         let currentSets = [];    // Level 3: array of question sets (each set = array of parts)
         let currentSetIndex = 0;
         let activePart = null;   // the part currently being answered (for reflection / AI tutor)
+        let activeFillInput = null; // the answer bar currently focused (helper-button target)
+        let l3Focus = {};        // per L3 part: id of the currently focused answer bar
         
         // --- SCORE BOARD ---
         // Full marks per level, marks deducted per heart lost. Marks accumulate across replays.
@@ -501,6 +521,9 @@
 
             // L3 part factory: fill answerStr + MC options (for headless MC fallback) + display TeX
             part: function(displayTex, answerStr, ansTex, distractors, vars, law, src) {
+                // Family convention: Paper 1 question sentences end with a full stop.
+                const visible = displayTex.replace(/\\text\{([^}]*)\}/g, '$1').replace(/\\[a-zA-Z]+/g, '').trim();
+                if (visible && !/[.!?]$/.test(visible)) displayTex = displayTex + ' \\text{.}';
                 const seen = new Set([ansTex]);
                 const list = [ansTex];
                 for (const o of distractors) {
@@ -556,6 +579,13 @@
                     cands.push(before + (n - 1) + after);
                 }
                 return this.opts4(ansStr, cands);
+            },
+
+            // answer-bar headings: one labeled bar per unknown, e.g. tag(pa, ['h','k'])
+            tag: function(part, labels, ph) {
+                part.labels = labels;
+                part.ph = ph || '…';
+                return part;
             },
 
             // MC options for a multi-value answer like 'h=2,k=-5'
@@ -800,9 +830,11 @@
                 const pa = this.part(aTex, `h=${h},k=${k}`, `h=${h},k=${k}`, [], ['h','k'], 'remainder_theorem', src);
                 pa.multi = true;
                 pa.options = this.multiOpts(pa.answerStr);
+                this.tag(pa, ['h', 'k']);
                 const pb = this.part(bTex, claimB, claimB, [], ['yes','no'], 'use_a', src);
                 pb.acceptList = ['yes','no'];
                 pb.options = this.ynOpts(claimB);
+                this.tag(pb, ['Yes/No'], 'yes/no');
                 return { src, parts: [pa, pb] };
             },
 
@@ -818,7 +850,9 @@
                 const pa = this.part(aTex, `l=${l},m=${m},n=${n}`, `l=${l},m=${m},n=${n}`, [], ['l','m','n'], 'remainder_theorem', src);
                 pa.multi = true;
                 pa.options = this.multiOpts(pa.answerStr);
+                this.tag(pa, ['l', 'm', 'n']);
                 const pb = this.part(bTex, String(realRoots), String(realRoots), [String(realRoots+1), String(Math.max(0, realRoots-1)), String(realRoots+2), '3'], ['x'], 'use_a', src);
+                this.tag(pb, ['answer']);
                 return { src, parts: [pa, pb] };
             },
 
@@ -852,9 +886,11 @@
                 const aTex = `\\text{Let } f(x) = 6x^3${this.st(A,'x^2')}${this.st(B,'x')}${this.st(C,'')} \\text{. When } f(x) \\text{ is divided by } 2x^2+ax+4 \\text{, the quotient and the remainder are } 3x+${q} \\text{ and } ${remTex} \\text{ respectively, where } a \\text{ is a constant. Find } a`;
                 const bTex = `\\text{Let } g(x) \\text{ be a quadratic polynomial such that when } g(x) \\text{ is divided by } 2x^2+ax+4 \\text{, the remainder is } ${remTex} \\text{. Someone claims that all the roots of the equation } f(x)-g(x)=0 \\text{ are integers. Do you agree? (Yes/No)}`;
                 const pa = this.part(aTex, String(a), String(a), [String(a+1), String(a-1), String(a+2), String(a-2), String(-a)], ['a'], 'remainder_theorem', src);
+                this.tag(pa, ['a']);
                 const pb = this.part(bTex, claimB ? 'yes' : 'no', claimB ? 'yes' : 'no', [], ['yes','no'], 'use_a', src);
                 pb.acceptList = ['yes','no'];
                 pb.options = this.ynOpts(claimB ? 'yes' : 'no');
+                this.tag(pb, ['Yes/No'], 'yes/no');
                 return { src, parts: [pa, pb] };
             },
 
@@ -868,9 +904,11 @@
                 const pa = this.part(aTex, `a=${a},b=${b}`, `a=${a},b=${b}`, [], ['a','b'], 'factor_theorem', src);
                 pa.multi = true;
                 pa.options = this.multiOpts(pa.answerStr);
+                this.tag(pa, ['a', 'b']);
                 const bAns = this.factorize([-1, -1, 3, 10 - R]);
                 const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
                 pb.options = this.factorOpts(bAns);
+                this.tag(pb, ['f(x)'], 'e.g. (x+2)(x-3)(2x+1)');
                 return { src, parts: [pa, pb] };
             },
 
@@ -890,9 +928,11 @@
                 const aTex = `\\text{Let } p(x) \\text{ be a cubic polynomial. When } p(x) \\text{ is divided by } x-1 \\text{, the remainder is } ${R1} \\text{. When } p(x) \\text{ is divided by } x+2 \\text{, the remainder is } ${R2} \\text{. It is given that } p(x) \\text{ is divisible by } 2x^2+9x+14 \\text{. Find the quotient when } p(x) \\text{ is divided by } 2x^2+9x+14`;
                 const bTex = `\\text{Factorize } p(x) \\text{ completely}`;
                 const pa = this.part(aTex, qAns, qAns, [this.poly([b,a]), this.poly([a,-b]), this.poly([-a,b]), this.poly([a,b+1])], ['x'], 'remainder_theorem', src);
+                this.tag(pa, ['quotient'], 'e.g. 3x+4');
                 const bAns = `(2x^2+9x+14)(${qAns})`;
                 const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
                 pb.options = this.factorOpts(bAns);
+                this.tag(pb, ['p(x)'], 'e.g. (x+2)(x-3)(2x+1)');
                 return { src, parts: [pa, pb] };
             },
 
@@ -910,9 +950,11 @@
                 const aTex = `\\text{The cubic polynomial } f(x) \\text{ is divisible by } x-1 \\text{. When } f(x) \\text{ is divided by } x^2-1 \\text{, the remainder is } kx${this.st(R,'')} \\text{, where } k \\text{ is a constant. Find } k`;
                 const bTex = `\\text{It is given that } x+3 \\text{ is a factor of } f(x) \\text{ and when } f(x) \\text{ is divided by } x \\text{, the remainder is } ${3*r2} \\text{. Factorize } f(x) \\text{ completely}`;
                 const pa = this.part(aTex, String(k), String(k), [String(k+1), String(k-1), String(k+2), String(k-2), String(R)], ['k'], 'factor_theorem', src);
+                this.tag(pa, ['k']);
                 const bAns = this.factorize([1, -3, r2]);
                 const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
                 pb.options = this.factorOpts(bAns);
+                this.tag(pb, ['f(x)'], 'e.g. (x+2)(x-3)(2x+1)');
                 return { src, parts: [pa, pb] };
             },
 
@@ -927,6 +969,7 @@
                 const aTex = `\\text{The polynomial } p(x) \\text{ is divisible by } x-5 \\text{. When } p(x) \\text{ is divided by } x^2+x+1 \\text{, the quotient and the remainder are } ${this.poly([A,B,D])} \\text{ and } cx+c-1 \\text{ respectively, where } c \\text{ is a constant. Find } c`;
                 const bTex = `\\text{It is given that } x+3 \\text{ is a factor of } p(x) \\text{. Factorize } p(x) \\text{ completely}`;
                 const pa = this.part(aTex, String(c), String(c), [String(c+1), String(c-1), String(c+2), String(c-2), String(c+4)], ['c'], 'remainder_theorem', src);
+                this.tag(pa, ['c']);
                 let bAns = '';
                 if (A === 1 && disc >= 0 && this.isSquare(disc)) {
                     const sq = Math.sqrt(disc);
@@ -937,6 +980,7 @@
                 }
                 const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
                 pb.options = this.factorOpts(bAns);
+                this.tag(pb, ['p(x)'], 'e.g. (x+2)(x-3)(2x+1)');
                 return { src, parts: [pa, pb] };
             },
 
@@ -955,9 +999,11 @@
                 const pa = this.part(aTex, `a=${A},b=${B}`, `a=${A},b=${B}`, [], ['a','b'], 'factor_theorem', src);
                 pa.multi = true;
                 pa.options = this.multiOpts(pa.answerStr);
+                this.tag(pa, ['a', 'b']);
                 const bAns = '2' + this.factorize([5, r2, r3]);
                 const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
                 pb.options = this.factorOpts(bAns);
+                this.tag(pb, ['p(x)'], 'e.g. (x+2)(x-3)(2x+1)');
                 return { src, parts: [pa, pb] };
             },
 
@@ -970,9 +1016,11 @@
                 const aTex = `\\text{Define } g(x) = x^3+5x^2-12x-1 \\text{. Let } h(x) = 3x^4+ax^3${this.st(B,'x^2')}${this.st(b,'x')}+c \\text{, where } a, b \\text{ and } c \\text{ are constants. When } h(x) \\text{ is divided by } g(x) \\text{, the quotient and the remainder are equal. Find the quotient when } h(x) \\text{ is divided by } g(x)`;
                 const bTex = `\\text{Factorize } h(x) \\text{ completely}`;
                 const pa = this.part(aTex, qAns, qAns, [`3x-${m}`, `${m}x+3`, `3x+${m+1}`, `x+${m}`], ['x'], 'remainder_theorem', src);
+                this.tag(pa, ['quotient'], 'e.g. 3x+4');
                 const bAns = `x(3x+${m})(x^2+5x-12)`;
                 const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
                 pb.options = this.factorOpts(bAns);
+                this.tag(pb, ['h(x)'], 'e.g. (x+2)(x-3)(2x+1)');
                 return { src, parts: [pa, pb] };
             },
 
@@ -998,12 +1046,15 @@
                 const bTex = `\\text{When } F(x) \\text{ is divided by } x+1 \\text{, the remainder is } ${R1} \\text{. It is given that } x-2 \\text{ is a factor of } F(x) \\text{. Find } q \\text{ and } r`;
                 const cTex = `\\text{Factorize } F(x) \\text{ completely}`;
                 const pa = this.part(aTex, String(p), String(p), [String(p+1), String(p-1), String(p+2), String(p-2), String(-p)], ['p'], 'factor_theorem', src);
+                this.tag(pa, ['p']);
                 const pb = this.part(bTex, `q=${q},r=${r}`, `q=${q},r=${r}`, [], ['q','r'], 'factor_theorem', src);
                 pb.multi = true;
                 pb.options = this.multiOpts(pb.answerStr);
+                this.tag(pb, ['q', 'r']);
                 const cAns = `(x-2)(${this.poly([q, 5])})${first}`;
                 const pc = this.part(cTex, cAns, cAns, [], ['x'], 'use_a', src);
                 pc.options = this.factorOpts(cAns);
+                this.tag(pc, ['F(x)'], 'e.g. (x+2)(x-3)(2x+1)');
                 return { src, parts: [pa, pb, pc] };
             },
 
@@ -1029,6 +1080,7 @@
                 const pa = this.part(aTex, `h=${h},k=${k}`, `h=${h},k=${k}`, [], ['h','k'], 'factor_theorem', src);
                 pa.multi = true;
                 pa.options = this.multiOpts(pa.answerStr);
+                this.tag(pa, ['h', 'k']);
                 let bAns = '';
                 if (disc >= 0 && this.isSquare(disc)) {
                     const sq = Math.sqrt(disc);
@@ -1041,6 +1093,7 @@
                 }
                 const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
                 pb.options = this.factorOpts(bAns);
+                this.tag(pb, ['f(x)'], 'e.g. (x+2)(x-3)(2x+1)');
                 return { src, parts: [pa, pb] };
             },
 
@@ -1061,11 +1114,12 @@
                     break;
                 }
                 const src = this.P1_SRC[11];
-                const aTex = `\\text{Let } f(x) = 3x^3${this.st(A,'x^2')}${this.st(k,'x')}${this.st(C,'')} \\text{, where } k \\text{ is a constant. It is given that } f(x) \\equiv (x-2)(ax^2+bx+c) \\text{, where } a, b \\text{ and } c \\text{ are constants. Find } a, b \\text{ and } c`;
+                const aTex = `\\text{Let } f(x) = 3x^3${this.st(A,'x^2')}+kx${this.st(C,'')} \\text{, where } k \\text{ is a constant. It is given that } f(x) \\equiv (x-2)(ax^2+bx+c) \\text{, where } a, b \\text{ and } c \\text{ are constants. Find } a, b \\text{ and } c`;
                 const bTex = `\\text{Hence factorize } f(x) \\text{ completely}`;
                 const pa = this.part(aTex, `a=3,b=${b},c=${c}`, `a=3,b=${b},c=${c}`, [], ['a','b','c'], 'factor_theorem', src);
                 pa.multi = true;
                 pa.options = this.multiOpts(pa.answerStr);
+                this.tag(pa, ['a', 'b', 'c']);
                 let bAns = '';
                 let vFound = null;
                 for (let vv = -20; vv <= 20; vv++) {
@@ -1079,6 +1133,7 @@
                 }
                 const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
                 pb.options = this.factorOpts(bAns);
+                this.tag(pb, ['f(x)'], 'e.g. (x+2)(x-3)(2x+1)');
                 return { src, parts: [pa, pb] };
             },
 
@@ -1096,9 +1151,11 @@
                 const pa = this.part(aTex, 'yes', 'yes', [], ['yes','no'], 'factor_theorem', src);
                 pa.acceptList = ['yes','no'];
                 pa.options = this.ynOpts('yes');
+                this.tag(pa, ['Yes/No'], 'yes/no');
                 const bAns = '4' + this.factorize([-1, r2, r3]);
                 const pb = this.part(bTex, bAns, bAns, [], ['x'], 'use_a', src);
                 pb.options = this.factorOpts(bAns);
+                this.tag(pb, ['f(x)'], 'e.g. (x+2)(x-3)(2x+1)');
                 return { src, parts: [pa, pb] };
             },
 
@@ -1118,7 +1175,9 @@
                     options: p0.options,
                     firstStepLaw: p0.firstStepLaw,
                     multi: !!p0.multi,
-                    acceptList: p0.acceptList
+                    acceptList: p0.acceptList,
+                    labels: p0.labels || ['answer'],
+                    ph: p0.ph || '…'
                 };
             },
 
@@ -1151,6 +1210,22 @@
                 }
             }
             return html.replace(/\s+/g, ' ').trim();
+        }
+
+        // Safe MathJax typeset: window.MathJax is only the config object until the
+        // CDN script finishes loading, so wait for the startup promise when needed.
+        function mjTypeset(elements) {
+            if (!window.MathJax) return;
+            const go = () => {
+                try {
+                    const p = elements ? MathJax.typesetPromise(elements) : MathJax.typesetPromise();
+                    if (p && p.catch) p.catch(() => {});
+                } catch (e) { /* ignore */ }
+            };
+            if (typeof MathJax.typesetPromise === 'function') { go(); return; }
+            if (MathJax.startup && MathJax.startup.promise && typeof MathJax.startup.promise.then === 'function') {
+                MathJax.startup.promise.then(go).catch(() => {});
+            }
         }
 
         function canonTerm(t) {
@@ -1524,7 +1599,37 @@
                 fillArea.classList.remove('hidden');
                 hint.textContent = "Fill-in Mode";
                 
-                document.getElementById('conventional-input').value = '';
+                // Build labeled answer bars: 'k = [input]', 'h = [input]', 'k = [input]' ...
+                // Always create FRESH input elements (reusing #conventional-input would
+                // destroy it on the next barsEl.innerHTML = '' — see the Q2 bug).
+                const barsEl = document.getElementById('fill-bars');
+                barsEl.innerHTML = '';
+                const labels = q.labels || ['answer'];
+                const ph = q.ph || '…';
+                labels.forEach((lab, i) => {
+                    const row = document.createElement('div');
+                    row.className = 'flex gap-2 w-full items-center';
+                    // Same font as the question: variables render as math ($a =$),
+                    // word labels as \text{...} (same face as the question prose).
+                    const isWord = /[a-zA-Z]{2,}/.test(lab) && !/^[a-zA-Z]\(/.test(lab);
+                    const labTex = isWord ? '$\\text{' + escapeHtml(lab) + '} =$' : '$' + escapeHtml(lab) + ' =$';
+                    row.innerHTML = `<span class="text-white text-[14pt] font-semibold whitespace-nowrap">${labTex}</span>`;
+                    const inp = document.createElement('input');
+                    inp.type = 'text';
+                    inp.id = (i === 0) ? 'conventional-input' : 'conventional-input-' + (i + 1);
+                    inp.className = 'flex-1 bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-lg font-mono text-white outline-none focus:border-amber-500 transition shadow-inner';
+                    inp.placeholder = ph;
+                    inp.oninput = () => updateLivePreview();
+                    inp.onkeypress = (ev) => handleEnter(ev);
+                    inp.onfocus = () => { activeFillInput = inp; };
+                    row.appendChild(inp);
+                    barsEl.appendChild(row);
+                });
+                activeFillInput = document.getElementById('conventional-input');
+                const subRow = document.createElement('div');
+                subRow.className = 'flex justify-end w-full';
+                subRow.innerHTML = `<button onclick="submitFillAnswer()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-6 rounded-lg text-base transition shadow-md active:scale-95">Submit</button>`;
+                barsEl.appendChild(subRow);
                 document.getElementById('math-preview').innerHTML = '\\( \\text{Empty} \\)';
                 
                 // Inject helper buttons based on variables
@@ -1541,9 +1646,7 @@
                 helperBox.innerHTML += `<button onclick="insertAtCursor('-')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white font-mono text-sm transition">-</button>`;
             }
 
-            if (window.MathJax) {
-                MathJax.typesetPromise();
-            }
+            mjTypeset();
         }
 
         // --- Level 3: render the whole question set as (a)(b)(c) blocks on one page ---
@@ -1576,11 +1679,12 @@
                 rebuildL3Block(pi);
             });
             
-            if (window.MathJax) MathJax.typesetPromise();
+            mjTypeset();
         }
 
         function insertL3Char(pi, ch) {
-            const f = document.getElementById(`l3-input-${pi}`);
+            const f = document.getElementById(l3Focus[pi] || `l3-input-${pi}`);
+            if (!f) return;
             const start = f.selectionStart ?? f.value.length;
             const end = f.selectionEnd ?? f.value.length;
             f.value = f.value.substring(0, start) + ch + f.value.substring(end, f.value.length);
@@ -1591,22 +1695,24 @@
         }
 
         function updateL3Preview(pi) {
-            const input = document.getElementById(`l3-input-${pi}`).value;
+            const part = currentSets[currentSetIndex][pi];
+            const labels = part.labels || ['answer'];
+            const combined = barPreviewText(labels, l3BarIds(pi, labels));
             const previewBox = document.getElementById(`l3-preview-${pi}`);
             if (!previewBox) return;
-            if (!input.trim()) {
+            if (!combined.trim()) {
                 previewBox.innerHTML = '\\( \\text{Empty} \\)';
-                if (window.MathJax) MathJax.typesetPromise([previewBox]);
+                mjTypeset([previewBox]);
                 return;
             }
-            let texStr = input;
+            let texStr = combined;
             if (texStr.includes('/')) {
                 const parts = texStr.split('/');
                 if (parts.length === 2) texStr = `\\frac{${parts[0]}}{${parts[1]}}`;
             }
             texStr = texStr.replace(/\^([a-zA-Z0-9]+)/g, '^{$1}');
             previewBox.innerHTML = `$ ${texStr} $`;
-            if (window.MathJax) MathJax.typesetPromise([previewBox]).catch(() => {});
+            mjTypeset([previewBox]);
         }
 
         function submitSetPartMC(pi, btnIdx) {
@@ -1624,7 +1730,8 @@
             if (part.done) return;
             activePart = part;
             
-            const rawInput = document.getElementById(`l3-input-${pi}`).value;
+            const labels = part.labels || ['answer'];
+            const rawInput = buildAnswerString(labels, l3BarIds(pi, labels));
             if (!rawInput.trim()) {
                 showToast("Please enter an answer.", "info");
                 return;
@@ -1644,7 +1751,7 @@
                 <span id="l3-status-${pi}" class="${part.done ? 'text-green-400' : 'text-slate-400'} text-sm font-semibold">${part.done ? '✓ Correct' : ''}</span>
             </div>`;
             inner += `<div class="text-[11px] text-sky-400 font-semibold mb-1 text-left">${part.src || ''}</div>`;
-            inner += `<div id="l3-q-${pi}" class="text-base sm:text-lg text-white mb-3 text-justify leading-relaxed overflow-x-auto min-h-[40px]">${texToHtml(part.displayTex)}</div>`;
+            inner += `<div id="l3-q-${pi}" class="text-[14pt] text-white mb-3 text-justify leading-relaxed overflow-x-auto min-h-[40px]">${texToHtml(part.displayTex)}</div>`;
             if (part.done) {
                 inner += `<div class="text-center text-green-400 text-sm py-2 font-semibold">Answer: $ ${part.mcAnswerStr} $</div>`;
             } else if (part.mode === 'mc') {
@@ -1654,11 +1761,23 @@
                 });
                 inner += `</div>`;
             } else {
+                const labels = part.labels || ['answer'];
+                const ph = part.ph || '…';
+                inner += `<div class="flex flex-col gap-2 w-full">`;
+                labels.forEach((lab, i) => {
+                    const id = i === 0 ? `l3-input-${pi}` : `l3-input-${pi}-${i + 1}`;
+                    const isWord = /[a-zA-Z]{2,}/.test(lab) && !/^[a-zA-Z]\(/.test(lab);
+                    const labTex = isWord ? '$\\text{' + escapeHtml(lab) + '} =$' : '$' + escapeHtml(lab) + ' =$';
+                    inner += `
+                    <div class="flex gap-2 w-full items-center">
+                        <span class="text-white text-[14pt] font-semibold whitespace-nowrap">${labTex}</span>
+                        <input type="text" id="${id}" placeholder="${ph}" oninput="updateL3Preview(${pi})" onkeypress="if(event.key==='Enter')submitSetPartFill(${pi})" onfocus="l3Focus[${pi}]='${id}'" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-lg font-mono text-white outline-none focus:border-amber-500 transition shadow-inner">
+                    </div>`;
+                });
                 inner += `
-                <div class="flex gap-2 w-full">
-                    <input type="text" id="l3-input-${pi}" placeholder="e.g. (x+2)(x+3)" oninput="updateL3Preview(${pi})" onkeypress="if(event.key==='Enter')submitSetPartFill(${pi})" class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-lg font-mono text-white outline-none focus:border-amber-500 transition shadow-inner">
+                <div class="flex justify-end w-full">
                     <button onclick="submitSetPartFill(${pi})" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 rounded-lg text-base transition shadow-md active:scale-95">Submit</button>
-                </div>
+                </div></div>
                 <div id="l3-helpers-${pi}" class="flex flex-wrap gap-2 justify-center w-full mt-2">`;
                 part.variables.forEach(v => {
                     inner += `<button onclick="insertL3Char(${pi},'${v}')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-amber-200 font-mono text-sm transition">${v}</button>`;
@@ -1675,7 +1794,7 @@
             block.innerHTML = inner;
             block.classList.remove('border-slate-700');
             block.classList.add(part.done ? 'border-green-500/70' : 'border-slate-700');
-            if (window.MathJax) MathJax.typesetPromise([block]);
+            mjTypeset([block]);
         }
 
         function processSetAnswer(pi, isCorrect) {
@@ -1705,7 +1824,7 @@
         }
 
         function insertAtCursor(myValue) {
-            const myField = document.getElementById('conventional-input');
+            const myField = activeFillInput || document.getElementById('conventional-input');
             if (document.selection) {
                 myField.focus();
                 sel = document.selection.createRange();
@@ -1774,9 +1893,66 @@
             return nums.every((s, i) => /^-?\d+$/.test(s) && Math.abs(Number(s) - want[wantVars[i]]) <= 1e-9);
         }
 
+        // --- labeled answer bars ('k = [input]', 'h = [input] k = [input]') ---
+        function fillBarIds(labels) {
+            return labels.map((lab, i) => i === 0 ? 'conventional-input' : 'conventional-input-' + (i + 1));
+        }
+
+        function l3BarIds(pi, labels) {
+            return labels.map((lab, i) => i === 0 ? `l3-input-${pi}` : `l3-input-${pi}-${i + 1}`);
+        }
+
+        function gatherBarValues(ids) {
+            return ids.map(id => {
+                const el = document.getElementById(id);
+                return el && el.value ? String(el.value).trim() : '';
+            });
+        }
+
+        // Combine the labeled bars into one answer string for checking.
+        // Single label -> raw value; multiple labels -> 'h=-9,k=4'.
+        function buildAnswerString(labels, ids) {
+            const vals = gatherBarValues(ids);
+            if (labels.length === 1) {
+                let v = vals[0];
+                const pref = labels[0].toLowerCase() + '=';
+                if (v.toLowerCase().startsWith(pref)) v = v.slice(pref.length);
+                return v;
+            }
+            // Leniency: a single bar holding the whole ordered list, e.g. '2,-5'
+            const filledIdx = labels.map((lab, i) => vals[i] !== '').filter(Boolean);
+            if (filledIdx.length === 1) {
+                const i = labels.findIndex((lab, j) => vals[j] !== '');
+                let v = vals[i];
+                const pref = labels[i].toLowerCase() + '=';
+                if (v.toLowerCase().startsWith(pref)) v = v.slice(pref.length);
+                const bare = v.split(/[,;]/).map(s => s.trim());
+                if (bare.length === labels.length && bare.every(s => /^-?\d+(\.\d+)?$/.test(s))) {
+                    return labels.map((l, j) => l + '=' + bare[j]).join(',');
+                }
+            }
+            const pairs = [];
+            labels.forEach((lab, i) => {
+                let v = vals[i];
+                if (v === '') return;
+                const pref = lab.toLowerCase() + '=';
+                if (v.toLowerCase().startsWith(pref)) v = v.slice(pref.length);
+                pairs.push(lab + '=' + v);
+            });
+            return pairs.join(',');
+        }
+
+        // Preview text for the labeled bars: 'h=-9,\ k=4' or the raw single value
+        function barPreviewText(labels, ids) {
+            const vals = gatherBarValues(ids);
+            if (labels.length === 1) return vals[0];
+            return labels.map((lab, i) => lab + '=' + (vals[i] === '' ? '?' : vals[i])).join(',\\ ');
+        }
+
         function submitFillAnswer() {
             const q = currentQuestions[currentQuestionIndex];
-            const rawInput = document.getElementById('conventional-input').value;
+            const labels = q.labels || ['answer'];
+            const rawInput = buildAnswerString(labels, fillBarIds(labels));
             
             if(!rawInput.trim()) {
                 showToast("Please enter an answer.", "info");
@@ -1812,7 +1988,7 @@
         function showWrongReflectionModal() {
             const modal = document.getElementById('wrong-reflection-modal');
             modal.classList.remove('hidden');
-            if(window.MathJax) MathJax.typesetPromise([modal]);
+            mjTypeset([modal]);
         }
 
         function submitWrongReflection(selectedLaw) {
@@ -1865,16 +2041,18 @@
 
         // Live Math Preview for Fill-in Mode
         function updateLivePreview() {
-            const input = document.getElementById('conventional-input').value;
+            const q = currentQuestions[currentQuestionIndex];
+            const labels = q.labels || ['answer'];
+            const combined = barPreviewText(labels, fillBarIds(labels));
             const previewBox = document.getElementById('math-preview');
             
-            if(!input.trim()) {
+            if(!combined.trim()) {
                 previewBox.innerHTML = '\\( \\text{Empty} \\)';
-                if(window.MathJax) MathJax.typesetPromise([previewBox]);
+                mjTypeset([previewBox]);
                 return;
             }
 
-            let texStr = input;
+            let texStr = combined;
             
             // Simple parsing: a/b -> \frac{a}{b}
             if(texStr.includes('/')) {
@@ -1888,9 +2066,7 @@
             texStr = texStr.replace(/\^([a-zA-Z0-9]+)/g, '^{$1}');
             
             previewBox.innerHTML = `$ ${texStr} $`;
-            if (window.MathJax) {
-                MathJax.typesetPromise([previewBox]).catch(err => console.log('MathJax Error:', err));
-            }
+            mjTypeset([previewBox]);
         }
 
         // --- HELPER UI FUNCTIONS ---
@@ -1967,7 +2143,7 @@
                 </div>
             `;
             document.getElementById('ai-tutor-modal').classList.remove('hidden');
-            if(window.MathJax) MathJax.typesetPromise();
+            mjTypeset();
         }
 
         // --- REFLECTION & SUBMISSION LOGIC ---
