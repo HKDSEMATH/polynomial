@@ -8,14 +8,15 @@
     <script>
         MathJax = {
             tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
-            svg: { fontCache: 'global' }
+            output: { displayOverflow: 'scale', linebreaks: { inline: false } }
         };
     </script>
-    <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-svg.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         /* Paper typography: question text in Times New Roman, unknowns italic */
-        #question-display, .qtext { font-family: 'Times New Roman', Times, serif; }
+        #question-display, #l3-blocks, .qtext { font-family: 'Times New Roman', Times, serif; }
         .mathvar { font-style: italic; }
 
         .glass-panel {
@@ -84,14 +85,14 @@
            flowing text (fragments on their own line / raised, oversized look).
            Restore correct inline behaviour for math in the question text. */
         #question-display mjx-container,
-        #l3-area mjx-container {
-            margin: 0 0.1em !important;
-            font-size: 1em !important;
-        }
+        #l3-area mjx-container,
+        #l3-blocks mjx-container,
+        #mc-options mjx-container { margin: 0 0.25em !important; font-size: 1em !important; }
         #question-display mjx-container svg,
-        #l3-area mjx-container svg {
-            display: inline-block !important;
-        }
+        #l3-area mjx-container svg,
+        #l3-blocks mjx-container svg,
+        #mc-options mjx-container svg { display: inline-block !important; }
+        .option-btn mjx-container { display: block; margin-left: auto !important; margin-right: auto !important; }
         /* Display equations (\[...\] / $$...$$) keep their block formatting */
         #question-display mjx-container[display="true"],
         #l3-area mjx-container[display="true"] {
@@ -100,6 +101,54 @@
             overflow-x: auto;
             overflow-y: hidden;
         }
+
+        /* ==== COLORFUL THEME + ANSWER ANIMATIONS ==== */
+        body {
+            background-image:
+                radial-gradient(ellipse 80% 50% at 15% -10%, rgba(99, 102, 241, 0.30), transparent 60%),
+                radial-gradient(ellipse 60% 45% at 85% -5%, rgba(217, 70, 239, 0.22), transparent 60%),
+                radial-gradient(ellipse 75% 50% at 50% 110%, rgba(34, 211, 238, 0.20), transparent 60%);
+            background-attachment: fixed;
+        }
+        #login-screen h1 {
+            background: linear-gradient(90deg, #fbbf24, #f472b6, #818cf8, #34d399);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+        #dashboard-screen .glass-panel:hover { box-shadow: 0 0 26px rgba(139, 92, 246, 0.25); }
+        @keyframes flashGreen {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+            50% { box-shadow: 0 0 42px 10px rgba(34, 197, 94, 0.55); }
+        }
+        @keyframes flashRed {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+            30%, 60% { box-shadow: 0 0 48px 12px rgba(239, 68, 68, 0.6); }
+        }
+        .correct-flash { animation: flashGreen 0.7s ease-in-out; }
+        .wrong-flash { animation: flashRed 0.6s ease-in-out; }
+        @keyframes scoreBounce {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.45); }
+            100% { transform: scale(1); }
+        }
+        .score-bounce { animation: scoreBounce 0.5s ease; }
+        @keyframes heartBreakAnim {
+            0% { transform: scale(1); opacity: 1; }
+            40% { transform: scale(1.6); }
+            100% { transform: scale(0.4); opacity: 0.35; }
+        }
+        .heart-broken { display: inline-block; animation: heartBreakAnim 0.55s ease forwards; }
+        @keyframes badgeBounce {
+            0% { transform: scale(0.7); }
+            55% { transform: scale(1.12); }
+            100% { transform: scale(1); }
+        }
+        .badge-bounce { animation: badgeBounce 0.6s ease; }
+        /* Canonical MC option box rules (family-wide, do not regress) */
+        #mc-options .option-btn { white-space: normal; overflow-wrap: break-word; word-break: break-word; }
+        #mc-options .option-btn > div { max-width: 100%; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4 selection:bg-amber-500 selection:text-white">
@@ -258,6 +307,9 @@
                     ⭐ <span id="live-score">0</span>
                 </div>
             </div>
+            <button onclick="skipQuestion()" class="text-slate-500 hover:text-amber-400 transition text-xs font-bold uppercase tracking-wider mr-3">
+                Skip
+            </button>
             <button onclick="quitGame()" class="text-slate-500 hover:text-red-400 transition text-xs font-bold uppercase tracking-wider">
                 Abort
             </button>
@@ -284,7 +336,7 @@
                 </div>
             </div>
 
-            <div id="question-display" class="text-[14pt] text-white mb-5 overflow-x-auto py-4 px-4 text-justify leading-relaxed min-h-[100px] w-full">
+            <div id="question-display" class="text-[14pt] text-white mb-5 py-4 px-4 text-justify leading-relaxed min-h-[100px] w-full">
                 <!-- MathJax renders here -->
             </div>
             
@@ -404,9 +456,9 @@
         const GOOGLE_SCRIPT_URL =
             'https://script.google.com/macros/s/AKfycbwB1-LyitqptK90TCklrjuMO3qNHhib9Zlv4WuDDIUxpBr--0owbFg0iI985sJA4X8V/exec';
 
-        const APP_VERSION = '1';
+        const APP_VERSION = '2';
         (function watchAppVersion() {
-            const file = (location.pathname.split('/').pop() || '').split('?')[0];
+            const file = (location.pathname.split('/').pop() || 'index.html').split('?')[0];
             const check = () => {
                 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
                     .then(r => r.json())
@@ -425,7 +477,7 @@
         let badgeRecords = { level1: false, level2: false, level3: false };
         let currentLevel = 1;
         let currentQuestionIndex = 0;
-        let lives = 3;
+        let lives = 5;
         let currentQuestions = [];
         let currentQuestionMode = 'mc'; // state for current specific question: paper-driven ('Paper 1'=fill, 'Paper 2'=mc)
         let currentSets = [];    // Level 3: array of question sets (each set = array of parts)
@@ -1354,6 +1406,61 @@
         }
 
 
+        // --- COLORFUL ANSWER ANIMATIONS (confetti / flash / bounce) ---
+        function celebrate(big) {
+            if (typeof confetti === 'undefined') return;
+            confetti({
+                particleCount: big ? 170 : 70,
+                spread: big ? 100 : 60,
+                startVelocity: big ? 40 : 25,
+                origin: { y: 0.6 },
+                colors: ['#fbbf24', '#f472b6', '#818cf8', '#34d399', '#22d3ee', '#f87171']
+            });
+        }
+        function animateCorrect() {
+            celebrate(false);
+            const area = document.getElementById('main-game-area');
+            if (area) {
+                area.classList.remove('correct-flash', 'wrong-flash');
+                void area.offsetWidth;
+                area.classList.add('correct-flash');
+            }
+            const sc = document.getElementById('live-score');
+            if (sc) {
+                sc.classList.remove('score-bounce');
+                void sc.offsetWidth;
+                sc.classList.add('score-bounce');
+            }
+        }
+        function animateWrong() {
+            const area = document.getElementById('main-game-area');
+            if (area) {
+                area.classList.remove('correct-flash', 'wrong-flash');
+                void area.offsetWidth;
+                area.classList.add('wrong-flash');
+            }
+        }
+        function heartBreak() {
+            const c = document.getElementById('lives-container');
+            if (!c) return;
+            const spans = c.querySelectorAll('span');
+            const dead = spans[lives];
+            if (dead) {
+                dead.textContent = '💔';
+                dead.classList.remove('opacity-30', 'grayscale');
+                dead.classList.add('heart-broken');
+            }
+        }
+        function celebrateBig() {
+            celebrate(true);
+            const badge = document.getElementById('badge-card-' + currentLevel);
+            if (badge) {
+                badge.classList.remove('badge-bounce');
+                void badge.offsetWidth;
+                badge.classList.add('badge-bounce');
+            }
+        }
+
         // --- CORE GAME LOGIC ---
 
         function login() {
@@ -1592,7 +1699,7 @@
                 
                 const btns = mcArea.querySelectorAll('button');
                 btns.forEach((btn, idx) => {
-                    btn.innerHTML = q.options[idx];
+                    btn.innerHTML = '<div class="w-full text-center">' + q.options[idx] + '</div>';
                 });
             } else {
                 mcArea.classList.add('hidden');
@@ -1751,13 +1858,13 @@
                 <span id="l3-status-${pi}" class="${part.done ? 'text-green-400' : 'text-slate-400'} text-sm font-semibold">${part.done ? '✓ Correct' : ''}</span>
             </div>`;
             inner += `<div class="text-[11px] text-sky-400 font-semibold mb-1 text-left">${part.src || ''}</div>`;
-            inner += `<div id="l3-q-${pi}" class="text-[14pt] text-white mb-3 text-justify leading-relaxed overflow-x-auto min-h-[40px]">${texToHtml(part.displayTex)}</div>`;
+            inner += `<div id="l3-q-${pi}" class="text-[14pt] text-white mb-3 text-justify leading-relaxed min-h-[40px]">${texToHtml(part.displayTex)}</div>`;
             if (part.done) {
                 inner += `<div class="text-center text-green-400 text-sm py-2 font-semibold">Answer: $ ${part.mcAnswerStr} $</div>`;
             } else if (part.mode === 'mc') {
                 inner += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="l3-mc-${pi}">`;
                 part.options.forEach((o, bi) => {
-                    inner += `<button onclick="submitSetPartMC(${pi}, ${bi})" class="option-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl p-3 text-lg transition-all shadow-md active:scale-95 min-h-[56px] flex items-center justify-center">${o}</button>`;
+                    inner += `<button onclick="submitSetPartMC(${pi}, ${bi})" class="option-btn bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl p-3 text-lg transition-all shadow-md active:scale-95 min-h-[56px] flex items-center justify-center"><div class="w-full text-center">${o}</div></button>`;
                 });
                 inner += `</div>`;
             } else {
@@ -1805,7 +1912,8 @@
                 showToast(`Part ${currentSets[currentSetIndex][pi].partLabel} correct! Awesome job.`, "success");
                 
                 const set = currentSets[currentSetIndex];
-                set[pi].done = true;
+                                animateCorrect();
+                                set[pi].done = true;
                 rebuildL3Block(pi);
                 
                 if (set.every(p => p.done)) {
@@ -1819,7 +1927,8 @@
                     }, 700);
                 }
             } else {
-                showWrongReflectionModal();
+                                animateWrong();
+                                showWrongReflectionModal();
             }
         }
 
@@ -1971,7 +2080,8 @@
             if (isCorrect) {
                 // Track correct attempts
                 levelStats[`level${currentLevel}`].correct++;
-                showToast("Correct! Awesome job.", "success");
+                                animateCorrect();
+                                showToast("Correct! Awesome job.", "success");
                 currentQuestionIndex++;
                 
                 if (currentQuestionIndex >= currentQuestions.length) {
@@ -1981,7 +2091,8 @@
                 }
             } else {
                 // Instantly pop up the wrong reflection modal before deducting life
-                showWrongReflectionModal();
+                                animateWrong();
+                                showWrongReflectionModal();
             }
         }
 
@@ -2009,6 +2120,7 @@
             // Deduct life and shake the game screen to indicate a mistake
             lives--;
             updateLivesUI();
+            heartBreak();
             updateLiveScore();
             showWrongFeedback();
             
@@ -2025,12 +2137,56 @@
         }
 
         function winGame() {
-            badgeRecords[`level${currentLevel}`] = true;
+                        badgeRecords[`level${currentLevel}`] = true;
+            celebrateBig();
             const earned = currentAttemptMarks();
             scoreTotals[`level${currentLevel}`] += earned;
             saveScores();
             showToast(`Level ${currentLevel} Complete! +${earned} marks earned! 🏆`, "success");
             quitGame();
+        }
+        // Skip the current question/set: no mark or life is lost.
+        function skipQuestion() {
+            if (currentLevel === 3) {
+                const usedTexts = new Set(currentSets.map(s => s.map(p => p.displayTex).join('|')));
+                const usedOpts = new Set(currentSets.map(s => s.map(p => [...p.options].sort().join('~')).join('|')));
+                const usedAns = new Set(currentSets.map(s => s.map(p => p.answerStr).join('|')));
+                let parts = null, tKey = null, oKey = null, aKey = null, tries = 0;
+                do {
+                    parts = MathGen.generateL3Set();
+                    tKey = parts.map(p => p.displayTex).join('|');
+                    oKey = parts.map(p => [...p.options].sort().join('~')).join('|');
+                    aKey = parts.map(p => p.answerStr).join('|');
+                    tries++;
+                } while ((usedTexts.has(tKey) || usedOpts.has(oKey) || usedAns.has(aKey)) && tries < 100);
+                parts.forEach((part, pi) => {
+                    part.setNo = currentSetIndex + 1;
+                    part.partIdx = pi;
+                    part.partLabel = ['(a)', '(b)', '(c)'][pi];
+                    part.paper = 'Paper 1';
+                    part.done = false;
+                    part.mode = 'fill';
+                });
+                currentSets[currentSetIndex] = parts;
+                activePart = null;
+                renderSet();
+                return;
+            }
+
+            const usedTexts = new Set(currentQuestions.map(q => q.text));
+            const usedOpts = new Set(currentQuestions.map(q => [...q.options].sort().join('~')));
+            const usedAns = new Set(currentQuestions.map(q => q.answerStr));
+            let q = null, tKey = null, oKey = null, aKey = null, tries = 0;
+            do {
+                const idx = (currentLevel === 1) ? MathGen.rand(0, 10) : MathGen.rand(0, 12);
+                q = (currentLevel === 1) ? MathGen.generateL1(idx) : MathGen.generateL2(idx);
+                tKey = q.text;
+                oKey = [...q.options].sort().join('~');
+                aKey = q.answerStr;
+                tries++;
+            } while ((usedTexts.has(tKey) || usedOpts.has(oKey) || usedAns.has(aKey)) && tries < 300);
+            currentQuestions[currentQuestionIndex] = q;
+            renderQuestion();
         }
 
         function quitGame() {
